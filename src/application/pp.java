@@ -1,7 +1,8 @@
 package application;
 
 public class pp {
-	 int x,z;
+	 int x,z,y;
+	 
 	 
 	
 
