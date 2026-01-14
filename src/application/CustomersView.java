@@ -1,173 +1,220 @@
 package application;
 
 import dao.CustomerDAO;
-import model.Customer;
-
-import java.util.Optional;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import model.Customer;
+import java.time.LocalDate;
+import java.util.Optional;
 
 public class CustomersView {
 
-    private TableView<Customer> table = new TableView<>();
-    private ObservableList<Customer> data;
+	private TableView<Customer> table = new TableView<>();
+	private ObservableList<Customer> data = FXCollections.observableArrayList(CustomerDAO.getAllCustomers());
 
-    public Tab getTab() {
+	private FilteredList<Customer> filteredData = new FilteredList<>(data, c -> true);
 
-        TableColumn<Customer, Integer> colId = new TableColumn<>("ID");
-        colId.setCellValueFactory(new PropertyValueFactory<>("customerID"));
+	public BorderPane getView() {
 
-        TableColumn<Customer, String> colName = new TableColumn<>("Name");
-        colName.setCellValueFactory(new PropertyValueFactory<>("fullName"));
+		TableColumn<Customer, Integer> colId = new TableColumn<>("ID");
+		colId.setCellValueFactory(new PropertyValueFactory<>("customerID"));
 
-        TableColumn<Customer, String> colEmail = new TableColumn<>("Email");
-        colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
+		TableColumn<Customer, String> colName = new TableColumn<>("Name");
+		colName.setCellValueFactory(new PropertyValueFactory<>("fullName"));
 
-        TableColumn<Customer, String> colPhone = new TableColumn<>("Phone");
-        colPhone.setCellValueFactory(new PropertyValueFactory<>("phone"));
+		TableColumn<Customer, String> colEmail = new TableColumn<>("Email");
+		colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
 
-        TableColumn<Customer, String> colCity = new TableColumn<>("City");
-        colCity.setCellValueFactory(new PropertyValueFactory<>("city"));
+		TableColumn<Customer, String> colPhone = new TableColumn<>("Phone");
+		colPhone.setCellValueFactory(new PropertyValueFactory<>("phone"));
 
-        table.getColumns().addAll(colId, colName, colEmail, colPhone, colCity);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+		TableColumn<Customer, String> colCity = new TableColumn<>("City");
+		colCity.setCellValueFactory(new PropertyValueFactory<>("city"));
 
-        data = FXCollections.observableArrayList(CustomerDAO.getAllCustomers());
-        table.setItems(data);
+		table.getColumns().addAll(colId, colName, colEmail, colPhone, colCity);
+		table.setItems(filteredData);
+		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        Button bAdd = new Button("➕ Add");
-        Button bEdit = new Button("✏ Edit");
-        Button bDelete = new Button("🗑 Delete");
-        Button bRefresh = new Button("🔄 Refresh");
+		TextField searchField = new TextField();
+		searchField.setPromptText("🔍 Search customer (name, email, city...)");
+		searchField.setPrefWidth(250);
 
-        HBox bar = new HBox(10, bAdd, bEdit, bDelete, bRefresh);
-        bar.setPadding(new Insets(10));
+		searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+			String keyword = newVal.toLowerCase();
 
-        BorderPane l = new BorderPane();
-        l.setTop(bar);
-        l.setCenter(table);
+			filteredData.setPredicate(c -> {
+				if (keyword.isEmpty())
+					return true;
 
-        bRefresh.setOnAction(e -> refresh());
+				return c.getFullName().toLowerCase().contains(keyword) || c.getEmail().toLowerCase().contains(keyword)
+						|| c.getCity().toLowerCase().contains(keyword) || c.getPhone().toLowerCase().contains(keyword);
+			});
+		});
 
-        bAdd.setOnAction(e -> openAddWindow());
-        bEdit.setOnAction(e -> openEditWindow());
-        bDelete.setOnAction(e -> deleteCustomer());
+		Button add = new Button("➕ Add");
+		Button edit = new Button("✏ Edit");
+		Button delete = new Button("🗑 Delete");
 
-        Tab tab = new Tab("Customers", l);
-        tab.setClosable(false);
-        return tab;
-    }
+		add.setOnAction(e -> openAddWindow(Session.currentUser.getId()));
+		edit.setOnAction(e -> openEditWindow());
+		delete.setOnAction(e -> deleteCustomer());
 
+		HBox actions = new HBox(15, add, edit, delete, searchField);
+		actions.setPadding(new Insets(10));
 
-    private void refresh() {
-        data.setAll(CustomerDAO.getAllCustomers());
-    }
+		BorderPane layout = new BorderPane();
+		layout.setTop(actions);
+		layout.setCenter(table);
 
-    private void deleteCustomer() {
-        Customer sel = table.getSelectionModel().getSelectedItem();
-        if (sel == null) 
-        	  return;
+		return layout;
+	}
 
-        Alert a = new Alert(Alert.AlertType.CONFIRMATION);
-        a.setTitle("Delete Customer");
-        a.setHeaderText("Are you sure ?");
-        a.setContentText(sel.getFullName());
+	private void openAddWindow(int userId) {
+		Stage win = new Stage();
+		win.setTitle("Add Customer");
 
-        Optional<ButtonType> res = a.showAndWait();
-        if (res.isPresent() && res.get() == ButtonType.OK) {
-            CustomerDAO.deleteCustomer(sel.getCustomerID());
-            refresh();
-        }
-    }
+		Label title = new Label("➕ Add New Customer");
+		title.setStyle("-fx-font-size:18px; -fx-font-weight:bold;");
 
-    private void openAddWindow() {
-        Stage wd = new Stage();
-        wd.setTitle("Add Customer");
+		TextField name = new TextField();
+		TextField email = new TextField();
+		TextField phone = new TextField();
+		TextField address = new TextField();
+		TextField city = new TextField();
 
-        TextField tName = new TextField();
-        TextField tEmail = new TextField();
-        TextField tPhone = new TextField();
-        TextField tAddress = new TextField();
-        TextField tCity = new TextField();
+		name.setPromptText("Full Name");
+		email.setPromptText("Email");
+		phone.setPromptText("Phone");
+		address.setPromptText("Address");
+		city.setPromptText("City");
 
-        tName.setPromptText("Full Name");
-        tEmail.setPromptText("Email");
-        tPhone.setPromptText("Phone");
-        tAddress.setPromptText("Address");
-        tCity.setPromptText("City");
+		name.setMaxWidth(250);
+		email.setMaxWidth(250);
+		phone.setMaxWidth(250);
+		address.setMaxWidth(250);
+		city.setMaxWidth(250);
 
-        Button bSave = new Button("Save");
+		Label status = new Label();
+		status.setStyle("-fx-text-fill: red;");
 
-        bSave.setOnAction(e -> {
-            Customer c = new Customer(
-                    0,
-                    tName.getText(),
-                    tEmail.getText(),
-                    tPhone.getText(),
-                    tAddress.getText(),
-                    tCity.getText(),
-                    java.time.LocalDate.now()
-            );
+		Button save = new Button("💾 Save");
+		save.setStyle("""
+				    -fx-background-color: #2ecc71;
+				    -fx-text-fill: white;
+				    -fx-font-weight: bold;
+				    -fx-background-radius: 8;
+				    -fx-padding: 8 20 8 20;
+				""");
 
-            CustomerDAO.insertCustomer(c);
-            refresh();
-            wd.close();
-        });
+		save.setOnMouseEntered(e -> save.setStyle("""
+				    -fx-background-color: #27ae60;
+				    -fx-text-fill: white;
+				    -fx-font-weight: bold;
+				    -fx-background-radius: 8;
+				    -fx-padding: 8 20 8 20;
+				"""));
+		save.setOnMouseExited(e -> save.setStyle("""
+				    -fx-background-color: #2ecc71;
+				    -fx-text-fill: white;
+				    -fx-font-weight: bold;
+				    -fx-background-radius: 8;
+				    -fx-padding: 8 20 8 20;
+				"""));
 
-        VBox lt = new VBox(10,
-                new Label("Add New Customer"),
-                tName, tEmail, tPhone, tAddress, tCity,
-                bSave
-        );
-        lt.setPadding(new Insets(15));
+		save.setOnAction(e -> {
+			if (name.getText().isEmpty() || email.getText().isEmpty()) {
+				status.setText("⚠ Name and Email are required");
+				return;
+			}
 
-        wd.setScene(new Scene(lt, 320, 350));
-        wd.show();
-    }
+			Customer c = new Customer(0, userId, name.getText().trim(), email.getText().trim(), phone.getText().trim(),
+					address.getText().trim(), city.getText().trim(), LocalDate.now());
 
-    private void openEditWindow() {
-        Customer c = table.getSelectionModel().getSelectedItem();
-        if (c == null)
-        	  return;
+			CustomerDAO.insertCustomer(c);
+			refresh();
+			win.close();
+		});
 
-        Stage i = new Stage();
-        i.setTitle("Edit Customer");
+		VBox box = new VBox(10, title, name, email, phone, address, city, status, save);
+		box.setPadding(new Insets(20));
+		box.setAlignment(Pos.CENTER);
+		box.setStyle("""
+				    -fx-background-color: #ffffff;
+				    -fx-background-radius: 12;
+				    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 5);
+				""");
 
-        TextField tName = new TextField(c.getFullName());
-        TextField tEmail = new TextField(c.getEmail());
-        TextField tPhone = new TextField(c.getPhone());
-        TextField tAddress = new TextField(c.getAddress());
-        TextField tCity = new TextField(c.getCity());
+		StackPane root = new StackPane(box);
+		root.setStyle("-fx-background-color: linear-gradient(to bottom, #f5f7fa, #c3cfe2);");
 
-        Button bUpdate = new Button("Update");
+		win.setScene(new Scene(root, 350, 450));
+		win.show();
+	}
 
-        bUpdate.setOnAction(e -> {
-            c.setFullName(tName.getText());
-            c.setEmail(tEmail.getText());
-            c.setPhone(tPhone.getText());
-            c.setAddress(tAddress.getText());
-            c.setCity(tCity.getText());
+	private void openEditWindow() {
 
-            CustomerDAO.updateCustomer(c);
-            refresh();
-            i.close();
-        });
+		Customer c = table.getSelectionModel().getSelectedItem();
+		if (c == null)
+			return;
 
-        VBox l = new VBox(10,
-                new Label("Edit Customer"),
-                tName, tEmail, tPhone, tAddress, tCity,
-                bUpdate
-        );
-        l.setPadding(new Insets(15));
+		Stage win = new Stage();
 
-        i.setScene(new Scene(l, 320, 350));
-        i.show();
-    }
+		TextField name = new TextField(c.getFullName());
+		TextField email = new TextField(c.getEmail());
+		TextField phone = new TextField(c.getPhone());
+		TextField address = new TextField(c.getAddress());
+		TextField city = new TextField(c.getCity());
+
+		Button update = new Button("Update");
+
+		update.setOnAction(e -> {
+			c.setFullName(name.getText());
+			c.setEmail(email.getText());
+			c.setPhone(phone.getText());
+			c.setAddress(address.getText());
+			c.setCity(city.getText());
+
+			CustomerDAO.updateCustomer(c);
+			refresh();
+			win.close();
+		});
+
+		VBox box = new VBox(10, name, email, phone, address, city, update);
+		box.setPadding(new Insets(15));
+
+		win.setScene(new Scene(box, 300, 350));
+		win.setTitle("Edit Customer");
+		win.show();
+	}
+
+	private void deleteCustomer() {
+
+		Customer c = table.getSelectionModel().getSelectedItem();
+		if (c == null)
+			return;
+
+		Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+		alert.setTitle("Delete Customer");
+		alert.setHeaderText("Are you sure?");
+		alert.setContentText(c.getFullName());
+
+		Optional<ButtonType> res = alert.showAndWait();
+		if (res.isPresent() && res.get() == ButtonType.OK) {
+			CustomerDAO.deleteCustomer(c.getCustomerID());
+			refresh();
+		}
+	}
+
+	private void refresh() {
+		data.setAll(CustomerDAO.getAllCustomers());
+	}
+
 }

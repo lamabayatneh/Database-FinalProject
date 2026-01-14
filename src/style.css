@@ -1,0 +1,85 @@
+/* ================= ROOT ================= */
+
+.root {
+    -fx-font-family: "Segoe UI";
+    -fx-background-color: #f4f6f9;
+}
+
+/* ================= HEADER ================= */
+
+.header-title {
+    -fx-font-size: 26.0px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 15.0 20.0 10.0 20.0;
+}
+
+/* ================= TOOLBAR ================= */
+
+.toolbar {
+    -fx-background-color: white;
+    -fx-padding: 10.0 20.0 10.0 20.0;
+    -fx-border-color: #dddddd;
+    -fx-border-width: 0.0 0.0 1.0 0.0;
+}
+
+/* ================= BUTTONS ================= */
+
+.button {
+    -fx-background-radius: 6.0;
+    -fx-font-size: 13.0px;
+    -fx-padding: 7.0 14.0;
+}
+
+.btn-add {
+    -fx-background-color: #2ecc71;
+    -fx-text-fill: white;
+}
+
+.btn-edit {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+.btn-delete {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+}
+
+.btn-refresh {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+}
+
+/* ================= TABLE ================= */
+
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #dddddd;
+}
+
+.table-column-header {
+    -fx-background-color: #ecf0f1;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #3498db33;
+}
+
+/* ================= SEARCH ================= */
+
+.search-field {
+    -fx-pref-height: 32.0;
+    -fx-background-radius: 6.0;
+    -fx-border-radius: 6.0;
+}
+
+/* ================= ACTION BAR ================= */
+
+.action-bar {
+    -fx-background-color: white;
+    -fx-padding: 10.0 20.0;
+    -fx-border-color: #dddddd;
+    -fx-border-width: 1.0 0.0 0.0 0.0;
+}

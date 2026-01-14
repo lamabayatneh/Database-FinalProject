@@ -4,24 +4,27 @@ import java.time.LocalDate;
 
 public class Customer {
 
-    private int customerID;
-    private String fullName;
-    private String email;
-    private String phone;
-    private String address;
-    private String city;
-    private LocalDate registrationDate;
+	private int customerID;
+	private String fullName;
+	private String email;
+	private String phone;
+	private String address;
+	private String city;
+	private LocalDate registrationDate;
+	private int userID;
 
-    public Customer(int customerID, String fullName, String email, String phone,
-                    String address, String city, LocalDate registrationDate) {
-        this.customerID = customerID;
-        this.fullName = fullName;
-        this.email = email;
-        this.phone = phone;
-        this.address = address;
-        this.city = city;
-        this.registrationDate = registrationDate;
-    }
+	public Customer(int customerID, int userID, String fullName, String email, String phone, String address,
+			String city, LocalDate registrationDate) {
+		super();
+		this.customerID = customerID;
+		this.fullName = fullName;
+		this.email = email;
+		this.phone = phone;
+		this.address = address;
+		this.city = city;
+		this.registrationDate = registrationDate;
+		this.userID = userID;
+	}
 
 	public int getCustomerID() {
 		return customerID;
@@ -79,5 +82,12 @@ public class Customer {
 		this.registrationDate = registrationDate;
 	}
 
-   
+	public int getUserID() {
+		return userID;
+	}
+
+	public void setUserID(int userID) {
+		this.userID = userID;
+	}
+
 }
