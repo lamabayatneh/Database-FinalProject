@@ -10,7 +10,6 @@ public class Book {
     private double price;
     private int quantity;
     private LocalDate addedDate;
-
     private Category category;
     private String imagePath;
 

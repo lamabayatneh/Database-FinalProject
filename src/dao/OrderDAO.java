@@ -88,4 +88,41 @@ public class OrderDAO {
 
         return list;
     }
+    
+    public static List<Order> getOrdersByCustomer(String fullName) {
+        List<Order> list = new ArrayList<>();
+        String sql = "SELECT o.OrderID, o.CustomerID, c.FullName AS CustomerName, o.OrderDate, o.TotalAmount " +
+                     "FROM Orders o " +
+                     "JOIN Customer c ON o.CustomerID = c.CustomerID " +
+                     "WHERE c.FullName = ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, fullName);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                // تحويل التاريخ من SQL إلى LocalDate
+                Date sqlDate = rs.getDate("OrderDate");
+                LocalDate orderDate = sqlDate != null ? sqlDate.toLocalDate() : null;
+
+                // إنشاء كائن Order متوافق مع الكلاس
+                Order order = new Order(
+                        rs.getInt("OrderID"),
+                        rs.getInt("CustomerID"),
+                        rs.getString("CustomerName"),
+                        orderDate,
+                        rs.getDouble("TotalAmount")
+                );
+
+                list.add(order);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
 }

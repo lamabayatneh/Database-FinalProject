@@ -86,4 +86,36 @@ public class SupplierDAO {
             e.printStackTrace();
         }
     }
+    
+    public static List<Supplier> getSuppliersByCity(String city) {
+
+        List<Supplier> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM Supplier WHERE City = ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, city);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Supplier s = new Supplier(
+                        rs.getInt("SupplierID"),
+                        rs.getString("SupplierName"),
+                        rs.getString("City"),
+                        rs.getString("Email"),
+                        rs.getString("Phone"),
+                        rs.getString("ContactPerson")
+                );
+                list.add(s);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
 }

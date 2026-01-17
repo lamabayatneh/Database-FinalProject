@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import model.Category;
 
 public class ReportDAO {
 
@@ -67,6 +68,45 @@ public class ReportDAO {
 
         return list;
     }
+    
+    
+    public static Category getMostProfitableCategory() {
+
+        String sql = """
+            SELECT 
+                c.CategoryID,
+                c.CategoryName,
+                c.Description,
+                SUM(oi.Subtotal) AS Revenue
+            FROM OrderItem oi
+            JOIN Book b ON oi.BookID = b.BookID
+            JOIN Category c ON b.CategoryID = c.CategoryID
+            GROUP BY c.CategoryID, c.CategoryName, c.Description
+            ORDER BY Revenue DESC
+            LIMIT 1
+        """;
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                Category c = new Category(
+                        rs.getInt("CategoryID"),
+                        rs.getString("CategoryName"),
+                        rs.getString("Description")
+                );
+                c.setRevenue(rs.getDouble("Revenue"));
+                return c;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
 
     public static List<MonthlyFinanceRow> getNegativeProfitMonths() {
         List<MonthlyFinanceRow> all = getMonthlyFinance();

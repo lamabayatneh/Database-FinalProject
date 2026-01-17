@@ -2,6 +2,7 @@ package dao;
 
 import db.DBConnection;
 import model.Customer;
+import model.TopCustomer;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -163,6 +164,36 @@ public class CustomerDAO {
             e.printStackTrace();
         }
         return null;
+    }
+    
+    public static List<TopCustomer> getTopCustomers() {
+        List<TopCustomer> list = new ArrayList<>();
+        String sql = """
+            SELECT c.FullName,
+                   SUM(o.TotalAmount) AS TotalSpent
+            FROM Orders o
+            JOIN Customer c ON o.CustomerID = c.CustomerID
+            GROUP BY c.CustomerID, c.FullName
+            ORDER BY TotalSpent DESC
+            LIMIT 5
+        """;
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                String fullName = rs.getString("FullName");
+                double totalSpent = rs.getDouble("TotalSpent");
+
+                list.add(new TopCustomer(fullName, totalSpent));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
     }
 
 }

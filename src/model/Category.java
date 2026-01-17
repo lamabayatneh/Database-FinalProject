@@ -5,7 +5,7 @@ public class Category {
     private int categoryID;
     private String categoryName;
     private String description;
-
+    private double revenue;
     private int bookCount;
 
 
@@ -19,9 +19,19 @@ public class Category {
         this.categoryName = categoryName;
         this.description = description;
         this.bookCount = bookCount;
+        
     }
+    
 
-    public int getCategoryID() {
+    public double getRevenue() {
+		return revenue;
+	}
+
+	public void setRevenue(double revenue) {
+		this.revenue = revenue;
+	}
+
+	public int getCategoryID() {
         return categoryID;
     }
 
