@@ -1,134 +1,141 @@
 package application;
 
-import java.util.List;
-
-import dao.BookDAO;
-import dao.OrderDAO;
-import dao.OrderItemDAO;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import model.CartItem;
 
+import java.net.URL;
+
 public class CartView {
 
-	public void show(Stage stage, Runnable backAction) {
+    public void show(Stage stage, Runnable backAction) {
 
-		Label title = new Label("🛒 Your Shopping Cart");
-		title.setStyle("-fx-font-size:22px; -fx-font-weight:bold;");
+        /* ================= LOGO + USER ================= */
+        URL logoUrl = getClass().getResource("/logo.png");
+        if (logoUrl == null) {
+            throw new RuntimeException("logo.png not found in resources");
+        }
 
-		Button backBtn = new Button("⬅ Back");
-		backBtn.setOnAction(e -> backAction.run());
+        ImageView logo = new ImageView(new Image(logoUrl.toExternalForm()));
+        logo.setFitHeight(40);
+        logo.setPreserveRatio(true);
 
-		HBox topBar = new HBox(15, title, backBtn);
-		topBar.setPadding(new Insets(15));
-		topBar.setAlignment(Pos.CENTER_LEFT);
+        Label shopName = new Label("SABASTIA BookShop");
+        shopName.getStyleClass().add("sb-logo-text");
 
-		TableView<CartItem> table = new TableView<>();
-		table.setItems(FXCollections.observableArrayList(Session.cart.getItems()));
-		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        VBox logoBox = new VBox(2, logo, shopName);
+        logoBox.setAlignment(Pos.CENTER_LEFT);
 
-		TableColumn<CartItem, String> colTitle = new TableColumn<>("Book");
-		colTitle.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getBook().getTitle()));
+        Label userLabel = new Label(
+                "Welcome, " + Session.currentUser.getUsername()
+        );
+        userLabel.getStyleClass().add("sb-muted");
 
-		TableColumn<CartItem, Integer> colQty = new TableColumn<>("Qty");
-		colQty.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleIntegerProperty(c.getValue().getQuantity()).asObject());
+        BorderPane topBar = new BorderPane();
+        topBar.setLeft(logoBox);
+        topBar.setRight(userLabel);
+        topBar.setPadding(new Insets(10, 20, 10, 20));
 
-		TableColumn<CartItem, Double> colPrice = new TableColumn<>("Price");
-		colPrice.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleDoubleProperty(c.getValue().getBook().getPrice()).asObject());
+        /* ================= HEADER ================= */
+        Button backBtn = new Button("← Back");
+        backBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+        backBtn.setOnAction(s-> backAction.run());
 
-		TableColumn<CartItem, Double> colSub = new TableColumn<>("Subtotal");
-		colSub.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleDoubleProperty(c.getValue().getSubtotal()).asObject());
+        Label title = new Label("🛒 Your Shopping Cart");
+        title.getStyleClass().add("sb-title");
 
-		table.getColumns().addAll(colTitle, colQty, colPrice, colSub);
+        HBox header = new HBox(15, backBtn, title);
+        header.setAlignment(Pos.CENTER_LEFT);
 
-		Label totalLabel = new Label("Total: $ " + Session.cart.getTotal());
-		totalLabel.setStyle("""
-				    -fx-font-size:18px;
-				    -fx-font-weight:bold;
-				""");
-		if (Session.currentCustomer == null) {
-			new Alert(Alert.AlertType.ERROR, "Please login first").show();
-			return;
-		}
+        /* ================= TABLE ================= */
+        TableView<CartItem> table = new TableView<>();
+        table.setItems(
+                FXCollections.observableArrayList(
+                        Session.cart.getItems()
+                )
+        );
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setPrefHeight(350);
 
-		Button checkoutBtn = new Button("✅ Checkout");
-		checkoutBtn.setStyle("""
-				    -fx-background-color:#27ae60;
-				    -fx-text-fill:white;
-				    -fx-font-size:16px;
-				    -fx-padding:10 30;
-				    -fx-background-radius:10;
-				""");
+        TableColumn<CartItem, String> bookCol = new TableColumn<>("Book");
+        bookCol.setCellValueFactory(c ->
+                new SimpleStringProperty(
+                        c.getValue().getBook().getTitle()
+                )
+        );
 
-		checkoutBtn.setOnAction(e -> {
+        TableColumn<CartItem, Integer> qtyCol = new TableColumn<>("Qty");
+        qtyCol.setCellValueFactory(c ->
+                new SimpleIntegerProperty(
+                        c.getValue().getQuantity()
+                ).asObject()
+        );
 
-			if (Session.cart.getItems().isEmpty()) {
-				new Alert(Alert.AlertType.WARNING, "Cart is empty!").show();
-				return;
-			}
+        TableColumn<CartItem, Double> priceCol = new TableColumn<>("Price");
+        priceCol.setCellValueFactory(c ->
+                new SimpleDoubleProperty(
+                        c.getValue().getBook().getPrice()
+                ).asObject()
+        );
 
-			for (CartItem item : Session.cart.getItems()) {
-				int available = BookDAO.getQuantity(item.getBook().getBookID());
+        TableColumn<CartItem, Double> subCol = new TableColumn<>("Subtotal");
+        subCol.setCellValueFactory(c ->
+                new SimpleDoubleProperty(
+                        c.getValue().getSubtotal()
+                ).asObject()
+        );
 
-				if (item.getQuantity() > available) {
-					new Alert(Alert.AlertType.ERROR,
-							"Not enough stock for: " + item.getBook().getTitle() + "\nAvailable: " + available).show();
-					return;
-				}
-			}
+        table.getColumns().addAll(bookCol, qtyCol, priceCol, subCol);
 
-			int orderId = OrderDAO.createOrder(Session.currentCustomer.getCustomerID(), Session.cart.getTotal());
+        /* ================= FOOTER ================= */
+        Label totalLabel = new Label(
+                "Total: $ " + String.format("%.2f", Session.cart.getTotal())
+        );
+        totalLabel.getStyleClass().add("sb-title");
 
-			if (orderId == -1) {
-				new Alert(Alert.AlertType.ERROR, "Checkout failed").show();
-				return;
-			}
+        Button checkoutBtn = new Button("✔ Checkout");
+        checkoutBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        checkoutBtn.setPrefWidth(160);
 
-			var orderedItems = List.copyOf(Session.cart.getItems());
-			double total = Session.cart.getTotal();
+        checkoutBtn.setOnAction(s -> {
+            new OrderConfirmationView().show(
+                    stage,
+                    Session.currentCustomer,
+                    Session.cart,
+                    Session.cart.getTotal(),
+                    backAction
+            );
+        });
 
-			Session.cart.getItems().forEach(item -> {
-				OrderItemDAO.insertItem(orderId, item);
-				BookDAO.decreaseQuantity(item.getBook().getBookID(), item.getQuantity());
-			});
+        VBox footer = new VBox(10, totalLabel, checkoutBtn);
+        footer.setAlignment(Pos.CENTER_RIGHT);
 
-			Session.cart.clear();
+        /* ================= CARD ================= */
+        VBox card = new VBox(20, header, table, footer);
+        card.getStyleClass().add("sb-card");
+        card.setPadding(new Insets(20));
 
-			new OrderConfirmationView().show(stage, orderId, orderedItems, total, backAction);
+        /* ================= ROOT ================= */
+        VBox root = new VBox(15, topBar, card);
+        root.getStyleClass().add("sb-page");
 
-		});
+        Scene scene = new Scene(root, 1000, 650);
+        scene.getStylesheets().add(
+                getClass().getResource("/style.css").toExternalForm()
+        );
 
-		VBox bottomBox = new VBox(15, totalLabel, checkoutBtn);
-		bottomBox.setAlignment(Pos.CENTER_RIGHT);
-		bottomBox.setPadding(new Insets(15));
-
-		VBox card = new VBox(15, table, bottomBox);
-		card.setPadding(new Insets(20));
-		card.setStyle("""
-				    -fx-background-color:white;
-				    -fx-background-radius:15;
-				    -fx-effect:dropshadow(gaussian,#cccccc,20,0.3,0,5);
-				""");
-
-		BorderPane root = new BorderPane();
-		root.setTop(topBar);
-		root.setCenter(card);
-		root.setPadding(new Insets(20));
-		root.setStyle("""
-				    -fx-background-color:linear-gradient(to bottom,#f5f7fa,#e0e6ed);
-				""");
-
-		stage.setScene(new Scene(root, 800, 500));
-		stage.setTitle("Cart");
-	}
-
+        stage.setScene(scene);
+        stage.setTitle("Cart");
+        stage.show();
+    }
 }

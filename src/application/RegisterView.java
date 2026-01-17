@@ -6,89 +6,197 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.Customer;
 import model.User;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 
 public class RegisterView {
 
-	public void show(Stage stage) {
+    public void show(Stage stage) {
 
-		Label title = new Label("📝 Create New Account");
-		title.setStyle("-fx-font-size:22px; -fx-font-weight:bold;");
+        ImageView logo = loadLogo(110);
 
-		TextField fullName = new TextField();
-		fullName.setPromptText("Full Name");
+        Label title = new Label("Create Account");
+        title.getStyleClass().add("sb-title");
 
-		TextField email = new TextField();
-		email.setPromptText("Email (Username)");
+        Label subtitle = new Label("Create your account to continue.");
+        subtitle.getStyleClass().add("sb-subtitle");
 
-		PasswordField password = new PasswordField();
-		password.setPromptText("Password");
+        TextField fullName = new TextField();
+        fullName.setPromptText("Full Name");
+        fullName.getStyleClass().add("sb-field");
 
-		TextField phone = new TextField();
-		phone.setPromptText("Phone");
+        // ✅ NEW: Username (used for login)
+        TextField username = new TextField();
+        username.setPromptText("Username (used for login)");
+        username.getStyleClass().add("sb-field");
 
-		TextField address = new TextField();
-		address.setPromptText("Address");
+        // ✅ NEW: Email (stored in Customer table)
+        TextField email = new TextField();
+        email.setPromptText("Email");
+        email.getStyleClass().add("sb-field");
 
-		TextField city = new TextField();
-		city.setPromptText("City");
+        PasswordField password = new PasswordField();
+        password.setPromptText("Password");
+        password.getStyleClass().add("sb-field");
 
-		Button registerBtn = new Button("Register");
-		registerBtn.setPrefWidth(250);
+        TextField phone = new TextField();
+        phone.setPromptText("Phone");
+        phone.getStyleClass().add("sb-field");
 
-		Label status = new Label();
-		status.setStyle("-fx-text-fill:red;");
+        TextField address = new TextField();
+        address.setPromptText("Address");
+        address.getStyleClass().add("sb-field");
 
-		registerBtn.setOnAction(e -> {
+        TextField city = new TextField();
+        city.setPromptText("City");
+        city.getStyleClass().add("sb-field");
 
-			if (fullName.getText().isEmpty() || email.getText().isEmpty() || password.getText().isEmpty()) {
+        Label status = new Label();
+        status.getStyleClass().add("sb-status-error");
 
-				status.setText("⚠ Please fill required fields");
-				return;
-			}
+        Button registerBtn = new Button("Register");
+        registerBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        registerBtn.setMaxWidth(Double.MAX_VALUE);
 
-			User user = new User(0, email.getText().trim(), password.getText().trim(), "CUSTOMER");
+        Button backBtn = new Button("Back");
+        backBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+        backBtn.setMaxWidth(Double.MAX_VALUE);
 
-			int userId = UserDAO.insertAndReturnId(user);
-			if (userId == -1) {
-				status.setText("❌ Email already exists");
-				return;
-			}
+        backBtn.setOnAction(event -> {
+            try {
+                new MainApp().start(stage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            event.consume();
+        });
 
-			Customer customer = new Customer(0, userId, fullName.getText(), email.getText(), phone.getText(),
-					address.getText(), city.getText(), LocalDate.now());
+        registerBtn.setOnAction(event -> {
 
-			CustomerDAO.insertCustomer(customer);
+            status.setText("");
 
-			Alert alert = new Alert(Alert.AlertType.INFORMATION);
-			alert.setHeaderText("Account Created");
-			alert.setContentText("You can login now!");
-			alert.showAndWait();
+            String fn = fullName.getText().trim();
+            String un = username.getText().trim();
+            String em = email.getText().trim();
+            String pw = password.getText().trim();
 
-			new MainApp().showLogin(stage);
-		});
+            if (fn.isEmpty() || un.isEmpty() || em.isEmpty() || pw.isEmpty()) {
+                status.setText("Please fill required fields");
+                event.consume();
+                return;
+            }
 
-		VBox card = new VBox(12, title, fullName, email, password, phone, address, city, registerBtn, status);
-		card.setPadding(new Insets(30));
-		card.setAlignment(Pos.CENTER);
-		card.setMaxWidth(350);
-		card.setStyle("""
-				    -fx-background-color:white;
-				    -fx-background-radius:12;
-				    -fx-effect:dropshadow(gaussian,#ccc,15,0.3,0,5);
-				""");
+            // (اختياري) تحقق بسيط من شكل الإيميل
+            if (!em.contains("@") || !em.contains(".")) {
+                status.setText("Please enter a valid email");
+                event.consume();
+                return;
+            }
 
-		BorderPane root = new BorderPane(card);
-		BorderPane.setAlignment(card, Pos.CENTER);
-		root.setStyle("-fx-background-color: linear-gradient(to bottom, #f5f7fa, #c3cfe2);");
+            // ✅ users.username = Username (مش الإيميل)
+            User user = new User(0, un, pw, "CUSTOMER");
 
-		stage.setScene(new Scene(root, 450, 550));
-		stage.setTitle("Register");
-	}
+            int userId = UserDAO.insertAndReturnId(user);
+            if (userId == -1) {
+                status.setText("Username already exists");
+                event.consume();
+                return;
+            }
+
+            // ✅ Customer.Email = Email الحقيقي
+            Customer customer = new Customer(
+                    0,
+                    userId,
+                    fn,
+                    em,
+                    phone.getText().trim(),
+                    address.getText().trim(),
+                    city.getText().trim(),
+                    LocalDate.now()
+            );
+
+            CustomerDAO.insertCustomer(customer);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("Account Created");
+            alert.setContentText("You can login now using your username: " + un);
+            alert.showAndWait();
+
+            try {
+                new MainApp().start(stage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+            event.consume();
+        });
+
+        HBox buttons = new HBox(10, registerBtn, backBtn);
+        buttons.setAlignment(Pos.CENTER);
+        registerBtn.setPrefWidth(160);
+        backBtn.setPrefWidth(160);
+
+        VBox card = new VBox(
+                12,
+                logo,
+                title,
+                subtitle,
+                fullName,
+                username,   // ✅
+                email,      // ✅
+                password,
+                phone,
+                address,
+                city,
+                buttons,
+                status
+        );
+
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(22));
+        card.setMaxWidth(440);
+        card.getStyleClass().add("sb-card");
+
+        BorderPane root = new BorderPane(card);
+        root.setPadding(new Insets(18));
+        root.getStyleClass().add("sb-root");
+
+        Scene scene = new Scene(root, 560, 740);
+        attachCss(scene);
+
+        stage.setTitle("Sabastia BookShop - Create Account");
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private ImageView loadLogo(double size) {
+        // ✅ خليها logo.png اللي عندك في resources
+        InputStream is = getClass().getResourceAsStream("/logo.png");
+
+        ImageView iv = new ImageView();
+        if (is != null) {
+            iv.setImage(new Image(is));
+        }
+        iv.setPreserveRatio(true);
+        iv.setFitHeight(size);
+        return iv;
+    }
+
+    private void attachCss(Scene scene) {
+        try {
+            String css = getClass().getResource("/style.css").toExternalForm();
+            if (!scene.getStylesheets().contains(css)) {
+                scene.getStylesheets().add(css);
+            }
+        } catch (Exception ignored) {}
+    }
 }

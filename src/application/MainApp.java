@@ -1,316 +1,326 @@
 package application;
 
-import java.util.List;
-import java.util.Optional;
-
 import dao.BookDAO;
+import dao.CategoryDAO;
 import dao.CustomerDAO;
 import dao.UserDAO;
 import javafx.application.Application;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import model.Book;
-import model.Customer;
+import model.Category;
 import model.User;
+
+import java.net.URL;
+import java.util.List;
 
 public class MainApp extends Application {
 
-	private FlowPane productsPane = new FlowPane(20, 20);
+    private final FlowPane booksPane = new FlowPane(20, 20);
+    private final TextField searchField = new TextField();
+
+    @Override
+    public void start(Stage stage) {
+        showHome(stage);
+    }
+
+    /* ================= HOME ================= */
+
+    private void showHome(Stage stage) {
+
+        /* ================= HEADER ================= */
+
+        ImageView logo = new ImageView();
+        URL logoUrl = getClass().getResource("/logo.png");
+        if (logoUrl != null) {
+            logo.setImage(new Image(logoUrl.toExternalForm()));
+        }
+        logo.setFitHeight(60);
+        logo.setPreserveRatio(true);
+
+        Label shopName = new Label("SABASTIA BookShop");
+        shopName.getStyleClass().add("sb-logo-text");
+
+        VBox logoBox = new VBox(6, logo, shopName);
+        logoBox.setAlignment(Pos.CENTER);
+
+        Label welcome = new Label();
+        welcome.getStyleClass().add("sb-welcome");
+
+        Button adminBtn = new Button("Admin Panel");
+        adminBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        adminBtn.setOnAction(e ->
+                new AdminDashboardView().show(stage, () -> showHome(stage))
+        );
+
+        Button cartBtn = new Button("🛒 Cart");
+        cartBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        cartBtn.setOnAction(e ->
+                new CartView().show(stage, () -> showHome(stage))
+        );
+
+        Button logoutBtn = new Button("Logout");
+        logoutBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+        logoutBtn.setOnAction(e -> {
+            Session.logout();
+            showHome(stage);
+        });
+
+        Button loginHeaderBtn = new Button("Login");
+        loginHeaderBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+
+        Button registerHeaderBtn = new Button("Create Account");
+        registerHeaderBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+
+        HBox actions = new HBox(
+                10,
+                welcome,
+                adminBtn,
+                cartBtn,
+                logoutBtn,
+                loginHeaderBtn,
+                registerHeaderBtn
+        );
+        actions.setAlignment(Pos.CENTER_RIGHT);
+
+        BorderPane header = new BorderPane();
+        header.setCenter(logoBox);
+        header.setRight(actions);
+        header.setPadding(new Insets(15));
+        header.getStyleClass().add("sb-header");
+
+        /* ================= LOGIN CARD ================= */
+
+        VBox loginCard = buildLoginCard(stage, () -> showHome(stage));
+        loginCard.setVisible(false);
+        loginCard.setManaged(false);
+
+        loginHeaderBtn.setOnAction(e -> {
+            boolean show = !loginCard.isVisible();
+            loginCard.setVisible(show);
+            loginCard.setManaged(show);
+        });
+
+        registerHeaderBtn.setOnAction(e ->
+                new RegisterView().show(stage)
+        );
+
+        /* ================= SEARCH ================= */
+
+        searchField.setPromptText("Search by title or author...");
+        searchField.setPrefWidth(420);
+
+        Button searchBtn = new Button("Search");
+        searchBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+
+        Button clearBtn = new Button("Clear");
+        clearBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+
+        searchBtn.setOnAction(e -> doSearch());
+        clearBtn.setOnAction(e -> {
+            searchField.clear();
+            loadLatestBooks();
+        });
 
-	@Override
-	public void start(Stage stage) {
-		showLogin(stage);
-	}
+        HBox searchBox = new HBox(10, searchField, searchBtn, clearBtn);
+        searchBox.setAlignment(Pos.CENTER);
+        searchBox.setPadding(new Insets(10, 10, 0, 10));
 
-	private void showCustomerUI(Stage stage) {
+        /* ================= CATEGORIES ================= */
 
-		Label logo = new Label("📚 Sabastia Book Shop");
-		logo.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
+        FlowPane categoriesPane = new FlowPane(15, 15);
+        categoriesPane.setAlignment(Pos.CENTER);
+        categoriesPane.setPadding(new Insets(10));
 
-		TextField search = new TextField();
-		search.setPromptText("Search for books...");
-		search.setPrefWidth(300);
+        Button allBtn = new Button("All");
+        allBtn.getStyleClass().add("sb-category");
+        allBtn.setOnAction(e -> loadAllBooks());
+        categoriesPane.getChildren().add(allBtn);
 
-		Button backBtn = new Button("⬅ Back");
-		backBtn.setOnAction(e -> start(stage));
-		Button cartBtn = new Button("🛒 Cart");
+        for (Category c : CategoryDAO.getAllCategories()) {
+            Button btn = new Button(c.getCategoryName());
+            btn.getStyleClass().add("sb-category");
+            btn.setOnAction(e -> loadBooksByCategory(c.getCategoryName()));
+            categoriesPane.getChildren().add(btn);
+        }
 
-		cartBtn.setOnAction(e -> {
-			new CartView().show(stage, () -> showCustomerUI(stage));
-		});
+        /* ================= BOOK SECTION ================= */
 
-		HBox topBar = new HBox(20, logo, search, backBtn, cartBtn);
-		topBar.setPadding(new Insets(15));
+        Label sectionTitle = new Label("وصل حديثًا");
+        sectionTitle.getStyleClass().add("sb-section-title");
 
-		VBox categories = new VBox(15);
-		categories.setPadding(new Insets(15));
-		categories.setPrefWidth(200);
-		categories.setStyle("-fx-background-color: #f1f2f6;");
+        booksPane.setPadding(new Insets(20));
+        booksPane.setPrefWrapLength(1100);
+        loadLatestBooks();
 
-		Label catTitle = new Label("Categories");
-		catTitle.setStyle("-fx-font-weight: bold;");
+        VBox centerContent = new VBox(
+                15,
+                searchBox,
+                categoriesPane,
+                sectionTitle,
+                booksPane
+        );
+        centerContent.setAlignment(Pos.TOP_CENTER);
 
-		Button allBtn = new Button("📚 All Books");
-		Button progBtn = new Button("📘 Programming");
-		Button dbBtn = new Button("📗 Databases");
-		Button aiBtn = new Button("🤖 AI");
-		Button netBtn = new Button("🌐 Networks");
+        ScrollPane scroll = new ScrollPane(centerContent);
+        scroll.setFitToWidth(true);
 
-		allBtn.setOnAction(e -> loadAllBooks());
-		progBtn.setOnAction(e -> loadCategory("Programming"));
-		dbBtn.setOnAction(e -> loadCategory("Databases"));
-		aiBtn.setOnAction(e -> loadCategory("AI"));
-		netBtn.setOnAction(e -> loadCategory("Networks"));
+        /* ================= ROOT ================= */
 
-		categories.getChildren().addAll(catTitle, allBtn, progBtn, dbBtn, aiBtn, netBtn);
-
-		BorderPane layout = new BorderPane();
-		layout.setTop(topBar);
-		layout.setLeft(categories);
-		layout.setCenter(productsPane);
-
-		stage.setScene(new Scene(layout, 1200, 700));
-		stage.setTitle("Sabastia Book Shop");
-	}
-
-	private void loadAllBooks() {
-
-		productsPane.getChildren().clear();
-
-		List<Book> books = BookDAO.getAllBooks();
-		for (Book b : books) {
-			productsPane.getChildren().add(BookUI.createBookCard(b));
-		}
-	}
-
-	private void loadCategory(String category) {
-
-		productsPane.getChildren().clear();
-
-		List<Book> books = BookDAO.getBooksByCategory(category);
-		for (Book b : books) {
-			productsPane.getChildren().add(BookUI.createBookCard(b));
-		}
-	}
-
-	private void showAdminUI(Stage stage) {
-
-		TabPane tabPane = new TabPane();
-		TableView<Book> table = new TableView<>();
-		ObservableList<Book> data = FXCollections.observableArrayList(BookDAO.getAllBooks());
-
-		TableColumn<Book, Integer> colId = new TableColumn<>("ID");
-		colId.setCellValueFactory(new PropertyValueFactory<>("bookID"));
-
-		TableColumn<Book, String> colTitle = new TableColumn<>("Title");
-		colTitle.setCellValueFactory(new PropertyValueFactory<>("title"));
-
-		TableColumn<Book, String> colAuthor = new TableColumn<>("Author");
-		colAuthor.setCellValueFactory(new PropertyValueFactory<>("author"));
-
-		TableColumn<Book, Double> colPrice = new TableColumn<>("Price");
-		colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
-
-		TableColumn<Book, Integer> colQty = new TableColumn<>("Qty");
-		colQty.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-
-		table.getColumns().addAll(colId, colTitle, colAuthor, colPrice, colQty);
-		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-		Button btnAdd = new Button("➕ Add");
-		Button btnEdit = new Button("✏ Edit");
-		Button btnDelete = new Button("🗑 Delete");
-
-		btnAdd.setOnAction(e -> BookUI.openAddBookWindow(data));
-
-		btnEdit.setOnAction(e -> {
-			Book selected = table.getSelectionModel().getSelectedItem();
-			if (selected != null)
-				BookUI.openEditBookWindow(selected, data);
-
-		});
-
-		btnDelete.setOnAction(e -> {
-			Book selected = table.getSelectionModel().getSelectedItem();
-			if (selected == null)
-				return;
-
-			Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-			alert.setTitle("Delete Book");
-			alert.setHeaderText("Are you sure?");
-			alert.setContentText(selected.getTitle());
-
-			Optional<ButtonType> result = alert.showAndWait();
-			if (result.isPresent() && result.get() == ButtonType.OK) {
-				BookDAO.deleteBook(selected.getBookID());
-				data.setAll(BookDAO.getAllBooks());
-			}
-		});
-
-		BorderPane booksLayout = new BorderPane();
-		Tab booksTab = new Tab("📚 Books");
-		booksTab.setClosable(false);
-		booksTab.setContent(booksLayout);
-		TextField searchField = new TextField();
-		searchField.setPromptText("🔍 Search by title or author...");
-		searchField.setPrefWidth(250);
-		FilteredList<Book> filteredData = new FilteredList<>(data, b -> true);
-		table.setItems(filteredData);
-
-		searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-			String keyword = newVal.toLowerCase();
-
-			filteredData.setPredicate(book -> {
-				if (keyword.isEmpty())
-					return true;
-
-				return book.getTitle().toLowerCase().contains(keyword)
-						|| book.getAuthor().toLowerCase().contains(keyword);
-			});
-		});
-
-		HBox booksTopBar = new HBox(15, btnAdd, btnEdit, btnDelete, searchField);
-		booksTopBar.setPadding(new Insets(10));
-		booksLayout.setTop(booksTopBar);
-		booksLayout.setCenter(table);
-
-		CustomersView customersView = new CustomersView();
-		Tab customersTab = new Tab("👤 Customers");
-		customersTab.setClosable(false);
-		customersTab.setContent(customersView.getView());
-
-		tabPane.getTabs().addAll(booksTab, customersTab);
-
-		Button btnBack = new Button("⬅ Back");
-		btnBack.setOnAction(e -> start(stage));
-
-		Label title = new Label("🛠 Admin Panel");
-		title.setStyle("-fx-font-size:18px; -fx-font-weight:bold;");
-
-		HBox topBar = new HBox(15, btnBack, title);
-		topBar.setPadding(new Insets(10));
-
-		BorderPane root = new BorderPane();
-		root.setTop(topBar);
-		root.setCenter(tabPane);
-
-		stage.setScene(new Scene(root, 1100, 650));
-		stage.setTitle("Admin Panel");
-		stage.show();
-	}
-
-	void showLogin(Stage stage) {
-
-		Button registerBtn = new Button("Create Account");
-
-		registerBtn.setOnAction(e -> {
-			new RegisterView().show(stage);
-		});
-
-		Label title = new Label("🔐 Login");
-		title.setStyle("-fx-font-size:22px; -fx-font-weight:bold;");
-
-		TextField username = new TextField();
-		username.setPromptText("Username");
-		username.setMaxWidth(250);
-
-		PasswordField password = new PasswordField();
-		password.setPromptText("Password");
-		password.setMaxWidth(250);
-
-		Button loginBtn = new Button("Login");
-		loginBtn.setPrefWidth(250);
-		password.setOnAction(e -> loginBtn.fire());
-
-		username.setStyle("""
-				    -fx-padding: 10;
-				    -fx-font-size: 14px;
-				""");
-
-		password.setStyle("""
-				    -fx-padding: 10;
-				    -fx-font-size: 14px;
-				""");
-
-		loginBtn.setStyle("""
-				    -fx-background-color: #2c3e50;
-				    -fx-text-fill: white;
-				    -fx-font-size: 15px;
-				    -fx-background-radius: 8;
-				""");
-
-		loginBtn.setOnMouseEntered(e -> loginBtn.setStyle(
-				"-fx-background-color:#1abc9c; -fx-text-fill:white; -fx-font-size:15px; -fx-background-radius:8;"));
-
-		loginBtn.setOnMouseExited(e -> loginBtn.setStyle(
-				"-fx-background-color:#2c3e50; -fx-text-fill:white; -fx-font-size:15px; -fx-background-radius:8;"));
-
-		Label status = new Label();
-		status.setStyle("-fx-text-fill: red;");
-
-		loginBtn.setOnAction(e -> {
-
-			if (username.getText().isEmpty() || password.getText().isEmpty()) {
-				status.setText("⚠ Please enter username and password");
-				return;
-			}
-
-			User user = UserDAO.login(username.getText().trim(), password.getText().trim());
-
-			if (user == null) {
-				status.setText("❌ Invalid username or password");
-				return;
-			}
-
-			Session.currentUser = user;
-
-			if ("ADMIN".equalsIgnoreCase(user.getRole())) {
-
-				showAdminUI(stage);
-
-			} else {
-
-				Customer customer = CustomerDAO.getCustomerByUserId(user.getId());
-
-				if (customer == null) {
-					status.setText("❌ Customer record not found");
-					return;
-				}
-
-				Session.currentCustomer = customer;
-				Session.currentUser = user;
-
-				showCustomerUI(stage);
-			}
-		});
-
-		VBox card = new VBox(15, title, username, password, loginBtn, status, registerBtn);
-		card.setPadding(new Insets(30));
-		card.setMaxWidth(350);
-		card.setStyle("""
-				    -fx-background-color: white;
-				    -fx-background-radius: 12;
-				    -fx-effect: dropshadow(gaussian, #cccccc, 15, 0.3, 0, 5);
-				""");
-
-		BorderPane root = new BorderPane(card);
-		root.setStyle("-fx-background-color: linear-gradient(to bottom, #f5f7fa, #c3cfe2);");
-		BorderPane.setAlignment(card, Pos.CENTER);
-
-		stage.setScene(new Scene(root, 400, 350));
-		stage.setTitle("Sabastia System - Login");
-		stage.show();
-	}
-
-	public static void main(String[] args) {
-		launch();
-	}
+        BorderPane root = new BorderPane();
+        root.setTop(header);
+        root.setCenter(scroll);
+        root.setRight(loginCard);
+        root.getStyleClass().add("sb-page");
+
+        Scene scene = new Scene(root, 1200, 800);
+        scene.getStylesheets().add(
+                getClass().getResource("/style.css").toExternalForm()
+        );
+
+        stage.setTitle("Sabastia BookShop");
+        stage.setScene(scene);
+        stage.show();
+
+        /* ================= SESSION STATE ================= */
+
+        boolean loggedIn = Session.isLoggedIn();
+        boolean isAdmin = loggedIn &&
+                "ADMIN".equalsIgnoreCase(Session.currentUser.getRole());
+
+        welcome.setVisible(loggedIn);
+        welcome.setManaged(loggedIn);
+        welcome.setText(loggedIn
+                ? "Welcome, " + Session.currentUser.getUsername()
+                : "");
+
+        adminBtn.setVisible(isAdmin);
+        adminBtn.setManaged(isAdmin);
+
+        cartBtn.setVisible(loggedIn && !isAdmin);
+        cartBtn.setManaged(loggedIn && !isAdmin);
+
+        logoutBtn.setVisible(loggedIn);
+        logoutBtn.setManaged(loggedIn);
+
+        loginHeaderBtn.setVisible(!loggedIn);
+        loginHeaderBtn.setManaged(!loggedIn);
+
+        registerHeaderBtn.setVisible(!loggedIn);
+        registerHeaderBtn.setManaged(!loggedIn);
+    }
+
+    /* ================= LOGIN CARD ================= */
+
+    private VBox buildLoginCard(Stage stage, Runnable onSuccess) {
+
+        Label title = new Label("Login");
+        title.getStyleClass().add("sb-title");
+
+        TextField username = new TextField();
+        username.setPromptText("Username");
+
+        PasswordField password = new PasswordField();
+        password.setPromptText("Password");
+
+        Button loginBtn = new Button("Login");
+        loginBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        loginBtn.setPrefWidth(220);
+
+        Button registerBtn = new Button("Create Account");
+        registerBtn.getStyleClass().addAll("sb-pill", "sb-accent");
+        registerBtn.setPrefWidth(220);
+
+        Label status = new Label();
+        status.setStyle("-fx-text-fill:red;");
+
+        loginBtn.setOnAction(e -> {
+
+            User user = UserDAO.login(
+                    username.getText(),
+                    password.getText()
+            );
+
+            if (user == null) {
+                status.setText("Invalid credentials");
+                return;
+            }
+
+            Session.currentUser = user;
+
+            if ("CUSTOMER".equalsIgnoreCase(user.getRole())) {
+                Session.currentCustomer =
+                        CustomerDAO.getCustomerByUserId(user.getId());
+            } else {
+                Session.currentCustomer = null;
+            }
+
+            onSuccess.run();
+        });
+
+        registerBtn.setOnAction(e ->
+                new RegisterView().show(stage)
+        );
+
+        VBox card = new VBox(
+                12,
+                title,
+                username,
+                password,
+                loginBtn,
+                registerBtn,
+                status
+        );
+        card.getStyleClass().add("sb-card");
+        card.setAlignment(Pos.CENTER);
+        card.setPrefWidth(300);
+
+        return card;
+    }
+
+    /* ================= BOOK LOADERS ================= */
+
+    private void loadLatestBooks() {
+        booksPane.getChildren().clear();
+        for (Book b : BookDAO.getLatestBooks(12)) {
+            booksPane.getChildren().add(BookUI.createBookCard(b));
+        }
+    }
+
+    private void loadAllBooks() {
+        booksPane.getChildren().clear();
+        for (Book b : BookDAO.getAllBooks()) {
+            booksPane.getChildren().add(BookUI.createBookCard(b));
+        }
+    }
+
+    private void loadBooksByCategory(String categoryName) {
+        booksPane.getChildren().clear();
+        for (Book b : BookDAO.getBooksByCategory(categoryName)) {
+            booksPane.getChildren().add(BookUI.createBookCard(b));
+        }
+    }
+
+    private void doSearch() {
+        String key = searchField.getText().trim();
+        if (key.isEmpty()) {
+            loadLatestBooks();
+            return;
+        }
+
+        booksPane.getChildren().clear();
+        for (Book b : BookDAO.searchBooks(key)) {
+            booksPane.getChildren().add(BookUI.createBookCard(b));
+        }
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
 }

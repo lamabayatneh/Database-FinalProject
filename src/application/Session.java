@@ -5,7 +5,19 @@ import model.Customer;
 import model.User;
 
 public class Session {
-	public static User currentUser;
-	public static Customer currentCustomer;
-	public static Cart cart = new Cart();
+
+    public static User currentUser = null;
+    public static Customer currentCustomer = null;
+
+    public static final Cart cart = new Cart();
+
+    public static boolean isLoggedIn() {
+        return currentUser != null;
+    }
+
+    public static void logout() {
+        currentUser = null;
+        currentCustomer = null;
+        cart.clear();
+    }
 }

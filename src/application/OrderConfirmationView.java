@@ -1,85 +1,107 @@
 package application;
 
-import javafx.collections.FXCollections;
+import dao.BookDAO;
+import dao.OrderDAO;
+import dao.OrderItemDAO;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import model.Cart;
 import model.CartItem;
-
-import java.time.LocalDate;
-import java.util.List;
+import model.Customer;
 
 public class OrderConfirmationView {
 
-	public void show(Stage stage, int orderId, List<CartItem> items, double total, Runnable backAction) {
+    public void show(
+            Stage stage,
+            Customer customer,
+            Cart cart,
+            double total,
+            Runnable backAction
+    ) {
 
-		Label title = new Label("✅ Order Confirmed");
-		title.setStyle("-fx-font-size:24px; -fx-font-weight:bold;");
+        /* ================= BUSINESS LOGIC (CHECKOUT) ================= */
 
-		Label orderInfo = new Label("Order #" + orderId + "   |   Date: " + LocalDate.now());
+        // 1️⃣ إنشاء الطلب
+        int orderId = OrderDAO.createOrder(
+                customer.getCustomerID(),
+                total
+        );
 
-		VBox header = new VBox(5, title, orderInfo);
+        if (orderId == -1) {
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    "Failed to create order. Please try again."
+            ).showAndWait();
+            return;
+        }
 
-		Label customerLabel = new Label("👤 Customer: " + Session.currentCustomer.getFullName());
+        // 2️⃣ حفظ عناصر الطلب + إنقاص الكمية
+        for (CartItem item : cart.getItems()) {
 
-		TableView<CartItem> table = new TableView<>();
-		table.setItems(FXCollections.observableArrayList(items));
-		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            // تأكد إن الكمية كافية (أمان)
+            if (item.getQuantity() > item.getBook().getQuantity()) {
+                new Alert(
+                        Alert.AlertType.ERROR,
+                        "Not enough stock for book: " +
+                                item.getBook().getTitle()
+                ).showAndWait();
+                return;
+            }
 
-		TableColumn<CartItem, String> colBook = new TableColumn<>("Book");
-		colBook.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getBook().getTitle()));
+            // حفظ عنصر الطلب
+            OrderItemDAO.insertItem(orderId, item);
 
-		TableColumn<CartItem, Integer> colQty = new TableColumn<>("Qty");
-		colQty.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleIntegerProperty(c.getValue().getQuantity()).asObject());
+            // إنقاص الكمية من الكتاب
+            BookDAO.decreaseQuantity(
+                    item.getBook().getBookID(),
+                    item.getQuantity()
+            );
+        }
 
-		TableColumn<CartItem, Double> colPrice = new TableColumn<>("Price");
-		colPrice.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleDoubleProperty(c.getValue().getBook().getPrice()).asObject());
+        // 3️⃣ تفريغ السلة بعد نجاح الشراء
+        cart.clear();
 
-		TableColumn<CartItem, Double> colSub = new TableColumn<>("Subtotal");
-		colSub.setCellValueFactory(
-				c -> new javafx.beans.property.SimpleDoubleProperty(c.getValue().getSubtotal()).asObject());
+        /* ================= UI ================= */
 
-		table.getColumns().addAll(colBook, colQty, colPrice, colSub);
+        Label title = new Label("✅ Order Confirmed");
+        title.getStyleClass().add("sb-title");
 
-		Label totalLabel = new Label("💰 Total: $" + total);
-		totalLabel.setStyle("-fx-font-size:18px; -fx-font-weight:bold;");
+        Label customerLabel = new Label(
+                "Customer: " + customer.getFullName()
+        );
 
-		Button doneBtn = new Button("🏠 Back to Store");
-		doneBtn.setStyle("""
-				    -fx-background-color:#3498db;
-				    -fx-text-fill:white;
-				    -fx-font-size:15px;
-				    -fx-padding:10 30;
-				    -fx-background-radius:8;
-				""");
+        Label totalLabel = new Label(
+                "Total Paid: $ " + String.format("%.2f", total)
+        );
 
-		doneBtn.setOnAction(e -> backAction.run());
+        Button backBtn = new Button("Back to Shop");
+        backBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+        backBtn.setOnAction(s -> backAction.run());
 
-		HBox footer = new HBox(doneBtn);
-		footer.setAlignment(Pos.CENTER_RIGHT);
+        VBox root = new VBox(
+                20,
+                title,
+                customerLabel,
+                totalLabel,
+                backBtn
+        );
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(40));
+        root.getStyleClass().add("sb-page");
 
-		VBox card = new VBox(15, header, customerLabel, table, totalLabel, footer);
+        Scene scene = new Scene(root, 600, 400);
+        scene.getStylesheets().add(
+                getClass().getResource("/style.css").toExternalForm()
+        );
 
-		card.setPadding(new Insets(25));
-		card.setStyle("""
-				    -fx-background-color:white;
-				    -fx-background-radius:15;
-				    -fx-effect:dropshadow(gaussian,#cccccc,20,0.3,0,5);
-				""");
-
-		BorderPane root = new BorderPane(card);
-		root.setPadding(new Insets(30));
-		root.setStyle("""
-				    -fx-background-color:linear-gradient(to bottom,#f5f7fa,#e0e6ed);
-				""");
-
-		stage.setScene(new Scene(root, 900, 600));
-		stage.setTitle("Order Confirmation");
-	}
+        stage.setScene(scene);
+        stage.setTitle("Order Confirmation");
+        stage.show();
+    }
 }

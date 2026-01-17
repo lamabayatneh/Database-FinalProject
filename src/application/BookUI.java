@@ -1,135 +1,101 @@
 package application;
 
-import dao.BookDAO;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import model.Book;
 
 public class BookUI {
 
-	public static VBox createBookCard(Book book) {
+    private static final String DEFAULT_COVER = "/images/default_book.png";
 
-		Label title = new Label(book.getTitle());
-		title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+    private static Image safeLoadImage(String resourcePath) {
+        try {
+            var url = BookUI.class.getResource(resourcePath);
+            if (url == null) return null;
+            return new Image(url.toExternalForm(), true);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
-		Label author = new Label("✍ " + book.getAuthor());
-		Label price = new Label("💲 " + book.getPrice());
-		Label stock = new Label("📦 In Stock: " + book.getQuantity());
+    private static ImageView buildCover(Book book) {
 
-		Button addToCart = new Button("🛒 Add to Cart");
-		addToCart.setStyle("""
-				        -fx-background-color: #2ecc71;
-				        -fx-text-fill: white;
-				        -fx-background-radius: 6;
-				""");
+        Image img = null;
 
-		if (book.getQuantity() <= 0) {
-			addToCart.setDisable(true);
-			stock.setText("❌ Out of Stock");
-		}
+        String path = (book != null) ? book.getImagePath() : null; // expected: images/xxx.png
+        if (path != null) {
+            path = path.trim();
+            if (!path.isEmpty()) {
+                if (!path.startsWith("/")) path = "/" + path; // => /images/xxx.png
+                img = safeLoadImage(path);
+            }
+        }
 
-		addToCart.setOnAction(e -> {
+        if (img == null) {
+            img = safeLoadImage(DEFAULT_COVER);
+        }
 
-			int alreadyInCart = Session.cart.getQuantity(book);
+        ImageView iv = new ImageView(img);
+        iv.setFitWidth(140);
+        iv.setFitHeight(190);
+        iv.setPreserveRatio(true);
+        iv.getStyleClass().add("sb-book-cover");
+        return iv;
+    }
 
-			if (alreadyInCart >= book.getQuantity()) {
-				new Alert(Alert.AlertType.WARNING, "❌ No more stock available").show();
-				return;
-			}
+    public static VBox createBookCard(Book book) {
 
-			Session.cart.addBook(book);
+        ImageView cover = buildCover(book);
 
-			new Alert(Alert.AlertType.INFORMATION, "✅ Added to cart").show();
-		});
+        Label title = new Label(book.getTitle());
+        title.getStyleClass().add("sb-title");
 
-		VBox card = new VBox(10, title, author, price, addToCart, stock);
-		card.setPadding(new Insets(15));
-		card.setPrefWidth(200);
-		card.setStyle("""
-				        -fx-background-color: white;
-				        -fx-border-color: #dddddd;
-				        -fx-border-radius: 8;
-				        -fx-background-radius: 8;
-				""");
+        Label author = new Label("Author: " + book.getAuthor());
+        Label price = new Label("Price: $" + String.format("%.2f", book.getPrice()));
+        Label stock = new Label("In Stock: " + book.getQuantity());
 
-		return card;
-	}
+        author.getStyleClass().add("sb-muted");
+        price.getStyleClass().add("sb-muted");
+        stock.getStyleClass().add("sb-muted");
 
-	public static void openAddBookWindow(ObservableList<Book> data) {
+        Button addToCart = new Button("Add to Cart");
+        addToCart.getStyleClass().addAll("sb-pill", "sb-primary");
 
-		Stage window = new Stage();
-		window.setTitle("Add Book");
+        // out of stock UI
+        if (book.getQuantity() <= 0) {
+            addToCart.setDisable(true);
+            stock.setText("Out of Stock");
+        }
 
-		TextField title = new TextField();
-		TextField author = new TextField();
-		TextField price = new TextField();
-		TextField qty = new TextField();
+        addToCart.setOnAction(e -> {
+            if (Session.cart == null) {
+                new Alert(Alert.AlertType.ERROR, "Cart is not initialized").show();
+                return;
+            }
+            Session.cart.addBook(book);
+            new Alert(Alert.AlertType.INFORMATION, "Added to cart").show();
+        });
 
-		title.setPromptText("Title");
-		author.setPromptText("Author");
-		price.setPromptText("Price");
-		qty.setPromptText("Quantity");
+        VBox card = new VBox(10,
+                cover,
+                title,
+                author,
+                price,
+                stock,
+                addToCart
+        );
 
-		Button save = new Button("Save");
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(15));
+        card.getStyleClass().add("sb-card");
+        card.setPrefWidth(240);
 
-		save.setOnAction(e -> {
-			try {
-				Book b = new Book(0, title.getText(), author.getText(), Double.parseDouble(price.getText()),
-						Integer.parseInt(qty.getText()), java.time.LocalDate.now());
-
-				BookDAO.insertBook(b);
-				data.setAll(BookDAO.getAllBooks());
-				window.close();
-
-			} catch (Exception ex) {
-				new Alert(Alert.AlertType.ERROR, "Invalid input").show();
-			}
-		});
-
-		VBox layout = new VBox(10, title, author, price, qty, save);
-		layout.setPadding(new Insets(15));
-
-		window.setScene(new Scene(layout, 300, 300));
-		window.show();
-	}
-
-
-	public static void openEditBookWindow(Book book, ObservableList<Book> data) {
-
-		Stage window = new Stage();
-		window.setTitle("Edit Book");
-
-		TextField title = new TextField(book.getTitle());
-		TextField author = new TextField(book.getAuthor());
-		TextField price = new TextField(String.valueOf(book.getPrice()));
-		TextField qty = new TextField(String.valueOf(book.getQuantity()));
-
-		Button update = new Button("Update");
-
-		update.setOnAction(e -> {
-			try {
-				book.setTitle(title.getText());
-				book.setAuthor(author.getText());
-				book.setPrice(Double.parseDouble(price.getText()));
-				book.setQuantity(Integer.parseInt(qty.getText()));
-
-				BookDAO.updateBook(book);
-				data.setAll(BookDAO.getAllBooks());
-				window.close();
-
-			} catch (Exception ex) {
-				new Alert(Alert.AlertType.ERROR, "Invalid input").show();
-			}
-		});
-
-		VBox layout = new VBox(10, title, author, price, qty, update);
-		layout.setPadding(new Insets(15));
-
-		window.setScene(new Scene(layout, 300, 300));
-		window.show();
-	}
+        return card;
+    }
 }
