@@ -1,11 +1,11 @@
 package model;
 
 public class MonthlyFinanceRow {
-	private String month; // "2025-03"
+	private String month;
 	private double salesRevenue;
 	private double purchaseExpenses;
 	private double profit;
-	private double profitMargin; // percentage
+	private double profitMargin;
 
 	public MonthlyFinanceRow(String month, double salesRevenue, double purchaseExpenses, double profit,
 			double profitMargin) {

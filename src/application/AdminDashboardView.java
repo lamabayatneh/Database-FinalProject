@@ -6,12 +6,10 @@ import dao.CustomerDAO;
 import dao.OrderDAO;
 import dao.SupplierDAO;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -24,13 +22,11 @@ import model.TopCustomer;
 import dao.PurchaseDAO;
 import dao.PurchaseItemDAO;
 import dao.StaffDAO;
-import dao.SupplierDAO;
-import javafx.beans.property.ReadOnlyObjectWrapper;
+
 import model.Purchase;
 import model.PurchaseItemRow;
 import model.Staff;
-import model.Supplier;
-
+import javafx.scene.chart.*;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.List;
@@ -102,6 +98,7 @@ public class AdminDashboardView {
 		stage.setScene(scene);
 		stage.setTitle("Admin Dashboard");
 		stage.show();
+
 	}
 
 	/* ================= BOOKS TAB ================= */
@@ -195,12 +192,89 @@ public class AdminDashboardView {
 		booksTable.getItems().setAll(BookDAO.getAllBooks());
 	}
 
-	/* ================= ADD / EDIT BOOK DIALOG ================= */
+	/* ================= HELPERS FOR DIALOGS (NEW - ADDED ONLY) ================= */
 
+	private void applyDialogCss(Dialog<?> dialog) {
+		URL cssUrl = getClass().getResource("/style.css");
+		if (cssUrl != null) {
+			dialog.getDialogPane().getStylesheets().add(cssUrl.toExternalForm());
+			dialog.getDialogPane().getStyleClass().add("sb-page");
+		}
+	}
+
+	private VBox buildDialogHeader(String screenTitle) {
+		ImageView logo = new ImageView(new Image(getClass().getResource("/logo.png").toExternalForm()));
+		logo.setFitHeight(58);
+		logo.setPreserveRatio(true);
+
+		Label appName = new Label("SABASTIA BookShop");
+		appName.getStyleClass().add("sb-logo-text");
+
+		Label title = new Label(screenTitle);
+		title.setStyle("-fx-font-size: 17px;" + "-fx-font-weight: 700;" + "-fx-text-fill: #6b0a4a;");
+
+		VBox titles = new VBox(2, appName, title);
+		titles.setAlignment(Pos.CENTER);
+
+		HBox headerRow = new HBox(14, logo, titles);
+		headerRow.setAlignment(Pos.CENTER);
+
+		VBox headerCard = new VBox(headerRow);
+		headerCard.setAlignment(Pos.CENTER);
+		headerCard.getStyleClass().add("sb-card");
+
+		headerCard.setMaxWidth(Double.MAX_VALUE);
+		headerCard.setPrefWidth(720);
+
+		return headerCard;
+	}
+
+	private void styleDialogButtons(Dialog<?> dialog, ButtonType saveBtnType) {
+		Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveBtnType);
+		if (saveButton != null)
+			saveButton.getStyleClass().addAll("sb-pill", "sb-primary");
+
+		Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+		if (cancelButton != null)
+			cancelButton.getStyleClass().addAll("sb-pill", "sb-accent");
+	}
+
+	private GridPane buildTwoColFormGrid() {
+		GridPane g = new GridPane();
+		g.setPadding(new Insets(22));
+		g.setHgap(16);
+		g.setVgap(14);
+		g.getStyleClass().add("sb-card");
+
+		g.setMaxWidth(Double.MAX_VALUE);
+		g.setPrefWidth(720);
+
+		ColumnConstraints col1 = new ColumnConstraints();
+		col1.setMinWidth(150);
+		col1.setPrefWidth(170);
+		col1.setHgrow(Priority.NEVER);
+
+		ColumnConstraints col2 = new ColumnConstraints();
+		col2.setHgrow(Priority.ALWAYS);
+		col2.setFillWidth(true);
+
+		g.getColumnConstraints().setAll(col1, col2);
+		return g;
+	}
+
+	private void centerLabel(Label lb) {
+		lb.getStyleClass().add("sb-muted");
+		lb.setMaxWidth(Double.MAX_VALUE);
+		GridPane.setHalignment(lb, javafx.geometry.HPos.CENTER);
+	}
+
+	/* ================= ADD / EDIT BOOK DIALOG ================= */
 	private Book showBookDialog(Book existing) {
 
 		Dialog<Book> dialog = new Dialog<>();
 		dialog.setTitle(existing == null ? "Add Book" : "Edit Book");
+
+		applyDialogCss(dialog);
 
 		ButtonType saveBtn = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
 		dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
@@ -227,20 +301,51 @@ public class AdminDashboardView {
 			imagePath.setText(existing.getImagePath());
 		}
 
-		GridPane g = new GridPane();
-		g.setPadding(new Insets(20));
-		g.setHgap(10);
-		g.setVgap(10);
+		GridPane g = buildTwoColFormGrid();
 
-		g.addRow(0, new Label("Title:"), title);
-		g.addRow(1, new Label("Author:"), author);
-		g.addRow(2, new Label("Price:"), price);
-		g.addRow(3, new Label("Quantity:"), qty);
-		g.addRow(4, new Label("Added Date:"), date);
-		g.addRow(5, new Label("Category:"), categoryBox);
-		g.addRow(6, new Label("Image Path:"), imagePath);
+		Label l1 = new Label("Title:");
+		Label l2 = new Label("Author:");
+		Label l3 = new Label("Price:");
+		Label l4 = new Label("Quantity:");
+		Label l5 = new Label("Added Date:");
+		Label l6 = new Label("Category:");
+		Label l7 = new Label("Image Path:");
 
-		dialog.getDialogPane().setContent(g);
+		centerLabel(l1);
+		centerLabel(l2);
+		centerLabel(l3);
+		centerLabel(l4);
+		centerLabel(l5);
+		centerLabel(l6);
+		centerLabel(l7);
+
+		title.setMaxWidth(Double.MAX_VALUE);
+		author.setMaxWidth(Double.MAX_VALUE);
+		price.setMaxWidth(Double.MAX_VALUE);
+		qty.setMaxWidth(Double.MAX_VALUE);
+		date.setMaxWidth(Double.MAX_VALUE);
+		categoryBox.setMaxWidth(Double.MAX_VALUE);
+		imagePath.setMaxWidth(Double.MAX_VALUE);
+
+		g.addRow(0, l1, title);
+		g.addRow(1, l2, author);
+		g.addRow(2, l3, price);
+		g.addRow(3, l4, qty);
+		g.addRow(4, l5, date);
+		g.addRow(5, l6, categoryBox);
+		g.addRow(6, l7, imagePath);
+
+		VBox header = buildDialogHeader(existing == null ? "Add Book" : "Edit Book");
+
+		VBox content = new VBox(16, header, g);
+		content.setPadding(new Insets(12));
+		content.setAlignment(Pos.TOP_CENTER);
+
+		dialog.getDialogPane().setContent(content);
+		dialog.getDialogPane().setPrefWidth(820);
+		dialog.getDialogPane().setPrefHeight(620);
+
+		styleDialogButtons(dialog, saveBtn);
 
 		dialog.setResultConverter(btn -> {
 			if (btn != saveBtn)
@@ -249,8 +354,9 @@ public class AdminDashboardView {
 			if (title.getText().isBlank() || author.getText().isBlank() || categoryBox.getValue() == null
 					|| imagePath.getText().isBlank()) {
 
-				new Alert(Alert.AlertType.ERROR, "All fields including Category and Image Path are required")
-						.showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "All fields including Category and Image Path are required");
+				applyDialogCss(a);
+				a.showAndWait();
 				return null;
 			}
 
@@ -260,7 +366,9 @@ public class AdminDashboardView {
 				p = Double.parseDouble(price.getText());
 				q = Integer.parseInt(qty.getText());
 			} catch (Exception e) {
-				new Alert(Alert.AlertType.ERROR, "Invalid Price / Quantity").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Invalid Price / Quantity");
+				applyDialogCss(a);
+				a.showAndWait();
 				return null;
 			}
 
@@ -301,6 +409,7 @@ public class AdminDashboardView {
 			}
 
 			Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+			applyDialogCss(confirm);
 			confirm.setHeaderText("Delete Customer");
 			confirm.setContentText("Are you sure you want to delete:\n" + selected.getFullName());
 
@@ -314,6 +423,7 @@ public class AdminDashboardView {
 
 		Button refreshBtn = new Button("Refresh");
 		refreshBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+		refreshBtn.setOnAction(e -> refreshCustomers());
 
 		HBox actions = new HBox(10, deleteBtn, refreshBtn);
 		actions.setPadding(new Insets(10));
@@ -373,6 +483,7 @@ public class AdminDashboardView {
 			}
 
 			Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+			applyDialogCss(confirm);
 			confirm.setHeaderText("Delete Category");
 			confirm.setContentText(
 					"Delete category: " + selected.getCategoryName() + "\n(Only if no books are linked)");
@@ -387,6 +498,7 @@ public class AdminDashboardView {
 
 		Button refreshBtn = new Button("Refresh");
 		refreshBtn.getStyleClass().addAll("sb-pill", "sb-primary");
+		refreshBtn.setOnAction(e -> refreshCategories());
 
 		HBox actions = new HBox(10, addBtn, deleteBtn, refreshBtn);
 		actions.setPadding(new Insets(10));
@@ -412,6 +524,8 @@ public class AdminDashboardView {
 		Dialog<Category> dialog = new Dialog<>();
 		dialog.setTitle("Add Category");
 
+		applyDialogCss(dialog);
+
 		ButtonType saveBtn = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
 		dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
@@ -422,24 +536,42 @@ public class AdminDashboardView {
 		descField.setPromptText("Description");
 		descField.setPrefRowCount(3);
 
-		GridPane grid = new GridPane();
-		grid.setHgap(10);
-		grid.setVgap(10);
-		grid.setPadding(new Insets(20));
+		GridPane grid = buildTwoColFormGrid();
 
-		grid.add(new Label("Name:"), 0, 0);
+		Label nL = new Label("Name:");
+		Label dL = new Label("Description:");
+		centerLabel(nL);
+		centerLabel(dL);
+
+		nameField.setMaxWidth(Double.MAX_VALUE);
+		descField.setMaxWidth(Double.MAX_VALUE);
+
+		grid.add(nL, 0, 0);
 		grid.add(nameField, 1, 0);
-		grid.add(new Label("Description:"), 0, 1);
+		grid.add(dL, 0, 1);
 		grid.add(descField, 1, 1);
 
-		dialog.getDialogPane().setContent(grid);
+		VBox header = buildDialogHeader("Add Category");
+
+		VBox content = new VBox(16, header, grid);
+		content.setPadding(new Insets(12));
+		content.setAlignment(Pos.TOP_CENTER);
+
+		dialog.getDialogPane().setContent(content);
+
+		dialog.getDialogPane().setPrefWidth(780);
+		dialog.getDialogPane().setPrefHeight(520);
+
+		styleDialogButtons(dialog, saveBtn);
 
 		dialog.setResultConverter(btn -> {
 			if (btn != saveBtn)
 				return null;
 
 			if (nameField.getText().isBlank()) {
-				new Alert(Alert.AlertType.ERROR, "Category name is required").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Category name is required");
+				applyDialogCss(a);
+				a.showAndWait();
 				return null;
 			}
 
@@ -452,7 +584,6 @@ public class AdminDashboardView {
 	private Tab buildReportsTab() {
 		Tab tab = new Tab("Reports");
 
-		// ===== Low Stock =====
 		Label lowStockTitle = new Label("Low Stock Books (Qty < 10)");
 		lowStockTitle.getStyleClass().add("sb-title");
 
@@ -485,7 +616,6 @@ public class AdminDashboardView {
 		lowStockCard.setPadding(new Insets(15));
 		lowStockCard.getStyleClass().add("sb-card");
 
-		// ===== Orders =====
 		Label ordersTitle = new Label("Customer Orders");
 		ordersTitle.getStyleClass().add("sb-title");
 
@@ -621,7 +751,6 @@ public class AdminDashboardView {
 		booksTable.getColumns().setAll(bookTitleCol, authorCol, categoryCol, qtyCo);
 		booksTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-		// تحميل البيانات عند الضغط على الزر
 		loadBooksBtn.setOnAction(e -> {
 			booksTable.getItems().setAll(BookDAO.getBooksSortedByCategory());
 		});
@@ -701,30 +830,24 @@ public class AdminDashboardView {
 		Label topCustTitle = new Label("Top 5 Customers (by Total Purchases)");
 		topCustTitle.getStyleClass().add("sb-title");
 
-		// TableView
 		TableView<TopCustomer> topCustTable = new TableView<>();
 
-		// Columns
 		TableColumn<TopCustomer, String> nameC = new TableColumn<>("Customer");
 		nameC.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getFullName()));
 
 		TableColumn<TopCustomer, Double> totalC = new TableColumn<>("Total Spent");
 		totalC.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getTotalSpent()));
 
-		// Add columns to table
 		topCustTable.getColumns().setAll(nameC, totalC);
 		topCustTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-		// Refresh button
 		Button refreshTop = new Button("Refresh Top Customers");
 		refreshTop.getStyleClass().addAll("sb-pill", "sb-primary");
 
-		// Load data
 		Runnable loadTop = () -> topCustTable.getItems().setAll(CustomerDAO.getTopCustomers());
 		refreshTop.setOnAction(e -> loadTop.run());
 		loadTop.run();
 
-		// VBox container
 		VBox topCustCard = new VBox(10, topCustTitle, refreshTop, topCustTable);
 		topCustCard.setPadding(new Insets(15));
 		topCustCard.getStyleClass().add("sb-card");
@@ -774,7 +897,6 @@ public class AdminDashboardView {
 		financeTable.getColumns().setAll(monthCol, salesCol, purchasesCol, profitCol, marginCol);
 		financeTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-		// ✅ تلوين الصفوف الخاسرة بالجدول الرئيسي
 		financeTable.setRowFactory(tv -> new TableRow<>() {
 			@Override
 			protected void updateItem(model.MonthlyFinanceRow item, boolean empty) {
@@ -805,10 +927,24 @@ public class AdminDashboardView {
 		negativeMonthsTable.getColumns().setAll(nMonthCol, nProfitCol, nMarginCol);
 		negativeMonthsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
+		// ====== Charts Card (NEW) ======
+		Label chartsTitle = new Label("Finance Charts");
+		chartsTitle.getStyleClass().add("sb-title");
+
+		VBox chartsCard = new VBox(10);
+		chartsCard.setPadding(new Insets(15));
+		chartsCard.getStyleClass().add("sb-card");
+		chartsCard.getChildren().add(chartsTitle);
+
 		// ====== Load methods ======
 		Runnable loadFinance = () -> {
-			financeTable.getItems().setAll(dao.ReportDAO.getMonthlyFinance());
+			List<model.MonthlyFinanceRow> rows = dao.ReportDAO.getMonthlyFinance();
+
+			financeTable.getItems().setAll(rows);
 			negativeMonthsTable.getItems().setAll(dao.ReportDAO.getNegativeProfitMonths());
+
+			chartsCard.getChildren().removeIf(n -> n instanceof LineChart || n instanceof BarChart);
+			chartsCard.getChildren().addAll(buildFinanceLineChart(rows), buildProfitBarChart(rows));
 		};
 
 		// ====== Most profitable category ======
@@ -843,7 +979,12 @@ public class AdminDashboardView {
 		card3.setPadding(new Insets(15));
 		card3.getStyleClass().add("sb-card");
 
-		refreshBtn.setOnAction(e -> loadFinance.run());
+		// ====== Refresh Button ======
+		refreshBtn.setOnAction(e -> {
+			loadFinance.run();
+			loadBestCategory.run();
+		});
+
 		loadFinance.run();
 
 		VBox card1 = new VBox(10, title, refreshBtn, financeTable);
@@ -854,7 +995,7 @@ public class AdminDashboardView {
 		card2.setPadding(new Insets(15));
 		card2.getStyleClass().add("sb-card");
 
-		VBox page = new VBox(15, card1, card2, card3);
+		VBox page = new VBox(15, card1, chartsCard, card2, card3);
 		page.setPadding(new Insets(15));
 
 		ScrollPane sp = new ScrollPane(page);
@@ -862,6 +1003,56 @@ public class AdminDashboardView {
 
 		tab.setContent(sp);
 		return tab;
+	}
+
+	/* ================== CHARTS HELPERS ================== */
+
+	private LineChart<String, Number> buildFinanceLineChart(List<model.MonthlyFinanceRow> rows) {
+
+		CategoryAxis x = new CategoryAxis();
+		NumberAxis y = new NumberAxis();
+
+		LineChart<String, Number> chart = new LineChart<>(x, y);
+		chart.setTitle("Sales vs Purchases vs Profit");
+		chart.setCreateSymbols(false);
+		chart.setMinHeight(320);
+
+		XYChart.Series<String, Number> sales = new XYChart.Series<>();
+		sales.setName("Sales");
+
+		XYChart.Series<String, Number> purchases = new XYChart.Series<>();
+		purchases.setName("Purchases");
+
+		XYChart.Series<String, Number> profit = new XYChart.Series<>();
+		profit.setName("Profit");
+
+		for (var r : rows) {
+			sales.getData().add(new XYChart.Data<>(r.getMonth(), r.getSalesRevenue()));
+			purchases.getData().add(new XYChart.Data<>(r.getMonth(), r.getPurchaseExpenses()));
+			profit.getData().add(new XYChart.Data<>(r.getMonth(), r.getProfit()));
+		}
+
+		chart.getData().addAll(sales, purchases, profit);
+		return chart;
+	}
+
+	private BarChart<String, Number> buildProfitBarChart(List<model.MonthlyFinanceRow> rows) {
+
+		CategoryAxis x = new CategoryAxis();
+		NumberAxis y = new NumberAxis();
+
+		BarChart<String, Number> chart = new BarChart<>(x, y);
+		chart.setTitle("Profit / Loss per Month");
+		chart.setLegendVisible(false);
+		chart.setMinHeight(320);
+
+		XYChart.Series<String, Number> series = new XYChart.Series<>();
+		for (var r : rows) {
+			series.getData().add(new XYChart.Data<>(r.getMonth(), r.getProfit()));
+		}
+
+		chart.getData().add(series);
+		return chart;
 	}
 
 	private Tab buildSuppliersTab() {
@@ -929,6 +1120,7 @@ public class AdminDashboardView {
 			}
 
 			Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+			applyDialogCss(confirm);
 			confirm.setHeaderText("Delete Supplier");
 			confirm.setContentText("Delete: " + selected.getSupplierName() + " ?");
 			confirm.showAndWait().ifPresent(res -> {
@@ -962,6 +1154,8 @@ public class AdminDashboardView {
 		Dialog<Supplier> dialog = new Dialog<>();
 		dialog.setTitle(existing == null ? "Add Supplier" : "Edit Supplier");
 
+		applyDialogCss(dialog);
+
 		ButtonType saveBtn = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
 		dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
@@ -985,25 +1179,52 @@ public class AdminDashboardView {
 			contact.setText(existing.getContactPerson());
 		}
 
-		GridPane g = new GridPane();
-		g.setPadding(new Insets(20));
-		g.setHgap(10);
-		g.setVgap(10);
+		GridPane g = buildTwoColFormGrid();
 
-		g.addRow(0, new Label("Name:"), name);
-		g.addRow(1, new Label("City:"), city);
-		g.addRow(2, new Label("Email:"), email);
-		g.addRow(3, new Label("Phone:"), phone);
-		g.addRow(4, new Label("Contact Person:"), contact);
+		Label l1 = new Label("Name:");
+		Label l2 = new Label("City:");
+		Label l3 = new Label("Email:");
+		Label l4 = new Label("Phone:");
+		Label l5 = new Label("Contact Person:");
+		centerLabel(l1);
+		centerLabel(l2);
+		centerLabel(l3);
+		centerLabel(l4);
+		centerLabel(l5);
 
-		dialog.getDialogPane().setContent(g);
+		name.setMaxWidth(Double.MAX_VALUE);
+		city.setMaxWidth(Double.MAX_VALUE);
+		email.setMaxWidth(Double.MAX_VALUE);
+		phone.setMaxWidth(Double.MAX_VALUE);
+		contact.setMaxWidth(Double.MAX_VALUE);
+
+		g.addRow(0, l1, name);
+		g.addRow(1, l2, city);
+		g.addRow(2, l3, email);
+		g.addRow(3, l4, phone);
+		g.addRow(4, l5, contact);
+
+		VBox header = buildDialogHeader(existing == null ? "Add Supplier" : "Edit Supplier");
+
+		VBox content = new VBox(16, header, g);
+		content.setPadding(new Insets(12));
+		content.setAlignment(Pos.TOP_CENTER);
+
+		dialog.getDialogPane().setContent(content);
+
+		dialog.getDialogPane().setPrefWidth(820);
+		dialog.getDialogPane().setPrefHeight(580);
+
+		styleDialogButtons(dialog, saveBtn);
 
 		dialog.setResultConverter(btn -> {
 			if (btn != saveBtn)
 				return null;
 
 			if (name.getText().isBlank()) {
-				new Alert(Alert.AlertType.ERROR, "Supplier Name is required").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Supplier Name is required");
+				applyDialogCss(a);
+				a.showAndWait();
 				return null;
 			}
 
@@ -1023,7 +1244,6 @@ public class AdminDashboardView {
 
 		Tab tab = new Tab("Purchases");
 
-		// ====== Table columns ======
 		TableColumn<Purchase, Integer> idCol = new TableColumn<>("PurchaseID");
 		idCol.setCellValueFactory(c -> new ReadOnlyObjectWrapper<>(c.getValue().getPurchaseID()));
 
@@ -1076,18 +1296,18 @@ public class AdminDashboardView {
 		Dialog<Boolean> dialog = new Dialog<>();
 		dialog.setTitle("New Purchase");
 
+		applyDialogCss(dialog);
+
 		ButtonType saveBtn = new ButtonType("Save Purchase", ButtonBar.ButtonData.OK_DONE);
 		dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
 		ComboBox<Supplier> supplierBox = new ComboBox<>();
 		supplierBox.getItems().setAll(SupplierDAO.getAllSuppliers());
 
-		// StaffID: خليها ثابتة 1 (مدير) أو اعملها TextField
 		TextField staffIdField = new TextField("1");
 
 		DatePicker date = new DatePicker(java.time.LocalDate.now());
 
-		// Items table (UI)
 		TableView<PurchaseItemRow> itemsTable = new TableView<>();
 
 		TableColumn<PurchaseItemRow, String> bookCol = new TableColumn<>("Book");
@@ -1107,9 +1327,8 @@ public class AdminDashboardView {
 		itemsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 		itemsTable.setPrefHeight(220);
 
-		// Add item controls
 		ComboBox<Book> bookBox = new ComboBox<>();
-		bookBox.getItems().setAll(BookDAO.getAllBooks()); // لازم BookDAO يرجّع category/image مثل ما ظبطنا
+		bookBox.getItems().setAll(BookDAO.getAllBooks()); 
 
 		TextField qty = new TextField();
 		qty.setPromptText("Qty");
@@ -1125,7 +1344,9 @@ public class AdminDashboardView {
 
 		addItemBtn.setOnAction(e -> {
 			if (bookBox.getValue() == null) {
-				new Alert(Alert.AlertType.ERROR, "Choose a book").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Choose a book");
+				applyDialogCss(a);
+				a.showAndWait();
 				return;
 			}
 			int q;
@@ -1136,7 +1357,9 @@ public class AdminDashboardView {
 				if (q <= 0 || u <= 0)
 					throw new RuntimeException();
 			} catch (Exception ex) {
-				new Alert(Alert.AlertType.ERROR, "Qty and Unit Cost must be valid numbers").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Qty and Unit Cost must be valid numbers");
+				applyDialogCss(a);
+				a.showAndWait();
 				return;
 			}
 
@@ -1151,29 +1374,50 @@ public class AdminDashboardView {
 				itemsTable.getItems().remove(sel);
 		});
 
-		GridPane top = new GridPane();
-		top.setHgap(10);
-		top.setVgap(10);
-		top.setPadding(new Insets(15));
+		GridPane top = buildTwoColFormGrid();
 
-		top.addRow(0, new Label("Supplier:"), supplierBox);
-		top.addRow(1, new Label("StaffID:"), staffIdField);
-		top.addRow(2, new Label("Date:"), date);
+		Label sL = new Label("Supplier:");
+		Label stL = new Label("StaffID:");
+		Label dL = new Label("Date:");
+		centerLabel(sL);
+		centerLabel(stL);
+		centerLabel(dL);
+
+		supplierBox.setMaxWidth(Double.MAX_VALUE);
+		staffIdField.setMaxWidth(Double.MAX_VALUE);
+		date.setMaxWidth(Double.MAX_VALUE);
+
+		top.addRow(0, sL, supplierBox);
+		top.addRow(1, stL, staffIdField);
+		top.addRow(2, dL, date);
 
 		HBox addRow = new HBox(10, new Label("Book:"), bookBox, new Label("Qty:"), qty, new Label("Unit:"), unitCost,
 				addItemBtn, removeItemBtn);
-		addRow.setAlignment(Pos.CENTER_LEFT);
+		addRow.setAlignment(Pos.CENTER);
 		addRow.setPadding(new Insets(0, 15, 10, 15));
+		addRow.getStyleClass().add("sb-card");
 
-		VBox content = new VBox(10, top, addRow, itemsTable);
+		VBox header = buildDialogHeader("New Purchase");
+
+		VBox content = new VBox(14, header, top, addRow, itemsTable);
+		content.setPadding(new Insets(12));
+		content.setAlignment(Pos.TOP_CENTER);
+
 		dialog.getDialogPane().setContent(content);
+
+		dialog.getDialogPane().setPrefWidth(980);
+		dialog.getDialogPane().setPrefHeight(740);
+
+		styleDialogButtons(dialog, saveBtn);
 
 		dialog.setResultConverter(btn -> {
 			if (btn != saveBtn)
 				return false;
 
 			if (supplierBox.getValue() == null) {
-				new Alert(Alert.AlertType.ERROR, "Supplier is required").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Supplier is required");
+				applyDialogCss(a);
+				a.showAndWait();
 				return false;
 			}
 
@@ -1181,16 +1425,19 @@ public class AdminDashboardView {
 			try {
 				staffId = Integer.parseInt(staffIdField.getText().trim());
 			} catch (Exception ex) {
-				new Alert(Alert.AlertType.ERROR, "StaffID must be a number").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "StaffID must be a number");
+				applyDialogCss(a);
+				a.showAndWait();
 				return false;
 			}
 
 			if (itemsTable.getItems().isEmpty()) {
-				new Alert(Alert.AlertType.ERROR, "Add at least one item").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Add at least one item");
+				applyDialogCss(a);
+				a.showAndWait();
 				return false;
 			}
 
-			// Save with transaction
 			try (var con = db.DBConnection.getConnection()) {
 				con.setAutoCommit(false);
 
@@ -1204,7 +1451,6 @@ public class AdminDashboardView {
 
 					PurchaseItemDAO.insertPurchaseItem(con, purchaseId, bookId, row.getQuantity(), row.getUnitCost());
 
-					// ✅ update stock
 					BookDAO.addStock(con, bookId, row.getQuantity());
 				}
 
@@ -1213,7 +1459,9 @@ public class AdminDashboardView {
 
 			} catch (Exception ex) {
 				ex.printStackTrace();
-				new Alert(Alert.AlertType.ERROR, "Failed to save purchase. Check console.").showAndWait();
+				Alert a = new Alert(Alert.AlertType.ERROR, "Failed to save purchase. Check console.");
+				applyDialogCss(a);
+				a.showAndWait();
 				return false;
 			}
 		});

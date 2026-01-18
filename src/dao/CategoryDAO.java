@@ -11,129 +11,116 @@ import java.util.List;
 
 public class CategoryDAO {
 
-    public static List<Category> getAllCategories() {
-        List<Category> list = new ArrayList<>();
-        String sql = "SELECT * FROM Category ORDER BY CategoryName";
+	public static List<Category> getAllCategories() {
+		List<Category> list = new ArrayList<>();
+		String sql = "SELECT * FROM Category ORDER BY CategoryName";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+		try (Connection con = DBConnection.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
 
-            while (rs.next()) {
-                list.add(new Category(
-                        rs.getInt("CategoryID"),
-                        rs.getString("CategoryName"),
-                        rs.getString("Description")
-                ));
-            }
+			while (rs.next()) {
+				list.add(new Category(rs.getInt("CategoryID"), rs.getString("CategoryName"),
+						rs.getString("Description")));
+			}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
 
-    public static List<Category> getAllCategoriesWithBookCount() {
-        List<Category> list = new ArrayList<>();
+	public static List<Category> getAllCategoriesWithBookCount() {
+		List<Category> list = new ArrayList<>();
 
-        String sql = """
-        SELECT c.CategoryID, c.CategoryName, c.Description,
-               COUNT(b.BookID) AS BookCount
-        FROM Category c
-        LEFT JOIN Book b ON b.CategoryID = c.CategoryID
-        GROUP BY c.CategoryID, c.CategoryName, c.Description
-        ORDER BY c.CategoryID
-    """;
+		String sql = """
+				    SELECT c.CategoryID, c.CategoryName, c.Description,
+				           COUNT(b.BookID) AS BookCount
+				    FROM Category c
+				    LEFT JOIN Book b ON b.CategoryID = c.CategoryID
+				    GROUP BY c.CategoryID, c.CategoryName, c.Description
+				    ORDER BY c.CategoryID
+				""";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+		try (Connection con = DBConnection.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
 
-            while (rs.next()) {
-                Category cat = new Category(
-                        rs.getInt("CategoryID"),
-                        rs.getString("CategoryName"),
-                        rs.getString("Description")
-                );
-                cat.setBookCount(rs.getInt("BookCount"));
-                list.add(cat);
-            }
+			while (rs.next()) {
+				Category cat = new Category(rs.getInt("CategoryID"), rs.getString("CategoryName"),
+						rs.getString("Description"));
+				cat.setBookCount(rs.getInt("BookCount"));
+				list.add(cat);
+			}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-        return list;
-    }
+		return list;
+	}
 
+	public static void insertCategory(Category c) {
+		String sql = "INSERT INTO Category (CategoryName, Description) VALUES (?, ?)";
 
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-    public static void insertCategory(Category c) {
-        String sql = "INSERT INTO Category (CategoryName, Description) VALUES (?, ?)";
+			ps.setString(1, c.getCategoryName());
+			ps.setString(2, c.getDescription());
+			ps.executeUpdate();
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-            ps.setString(1, c.getCategoryName());
-            ps.setString(2, c.getDescription());
-            ps.executeUpdate();
+	public static boolean deleteCategoryIfEmpty(int categoryId) {
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		String checkSql = "SELECT COUNT(*) AS cnt FROM Book WHERE CategoryID = ?";
+		String delSql = "DELETE FROM Category WHERE CategoryID = ?";
 
-    public static boolean deleteCategoryIfEmpty(int categoryId) {
+		try (Connection con = DBConnection.getConnection()) {
 
-        String checkSql = "SELECT COUNT(*) AS cnt FROM Book WHERE CategoryID = ?";
-        String delSql = "DELETE FROM Category WHERE CategoryID = ?";
+			try (PreparedStatement ps = con.prepareStatement(checkSql)) {
+				ps.setInt(1, categoryId);
+				ResultSet rs = ps.executeQuery();
+				if (rs.next() && rs.getInt("cnt") > 0) {
+					return false;
+				}
+			}
 
-        try (Connection con = DBConnection.getConnection()) {
+			try (PreparedStatement ps = con.prepareStatement(delSql)) {
+				ps.setInt(1, categoryId);
+				ps.executeUpdate();
+			}
 
-            try (PreparedStatement ps = con.prepareStatement(checkSql)) {
-                ps.setInt(1, categoryId);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next() && rs.getInt("cnt") > 0) {
-                    return false;
-                }
-            }
+			return true;
 
-            try (PreparedStatement ps = con.prepareStatement(delSql)) {
-                ps.setInt(1, categoryId);
-                ps.executeUpdate();
-            }
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
 
-            return true;
+	public static boolean deleteCategory(int categoryId) {
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+		if (BookDAO.hasBooksInCategory(categoryId)) {
+			return false;
+		}
 
-    public static boolean deleteCategory(int categoryId) {
+		String sql = "DELETE FROM Category WHERE CategoryID = ?";
 
-        if (BookDAO.hasBooksInCategory(categoryId)) {
-            return false;
-        }
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-        String sql = "DELETE FROM Category WHERE CategoryID = ?";
+			ps.setInt(1, categoryId);
+			ps.executeUpdate();
+			return true;
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-            ps.setInt(1, categoryId);
-            ps.executeUpdate();
-            return true;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-
-
+		return false;
+	}
 
 }

@@ -69,7 +69,6 @@ public class Supplier {
 		this.contactPerson = contactPerson;
 	}
 
-	// مهم لعرض الاسم في ComboBox
 	@Override
 	public String toString() {
 		return supplierName == null ? "" : supplierName;

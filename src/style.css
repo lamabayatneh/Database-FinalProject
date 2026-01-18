@@ -3,7 +3,6 @@
     -fx-background-color: #f7f7fb;
 }
 
-/* ====== GENERAL ====== */
 
 .sb-page {
     -fx-padding: 20;
@@ -27,7 +26,6 @@
     -fx-text-fill: #777;
 }
 
-/* ====== BUTTONS ====== */
 
 .sb-pill {
     -fx-background-radius: 10;
@@ -53,7 +51,6 @@
     -fx-background-color: #d89a1e;
 }
 
-/* ====== TABLE ====== */
 
 .table-view {
     -fx-background-color: white;
@@ -93,3 +90,171 @@
     -fx-font-size: 14px;
     -fx-text-fill: #555;
 }
+
+.sb-category .text {
+    -fx-fill: white;
+}
+
+.sb-category .arrow {
+    -fx-background-color: white;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: black;  
+}
+
+.sb-category .text {
+    -fx-fill: white;
+}
+
+.sb-category .arrow {
+    -fx-background-color: white;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: black;
+}
+
+.combo-box-popup .list-view .list-cell .text {
+    -fx-fill: black;
+}
+
+.sb-filter-label {
+    -fx-text-fill: #5a0037;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* ===== TABLE VIEW MODERN DESIGN ===== */
+
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* Header background */
+.table-view .column-header-background {
+    -fx-background-color: linear-gradient(to right, #7a0b4d, #9c1b64);
+    -fx-background-radius: 10 10 0 0;
+}
+
+/* Header text */
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.table-view .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Table rows */
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #eee;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #faf7fb;
+}
+
+/* Hover effect */
+.table-row-cell:hover {
+    -fx-background-color: #f3e6ef;
+}
+
+/* Selected row */
+.table-row-cell:selected {
+    -fx-background-color: #7a0b4d;
+}
+
+.table-row-cell:selected .text {
+    -fx-fill: white;
+}
+
+/* Cell padding */
+.table-cell {
+    -fx-padding: 10 12;
+    -fx-font-size: 13px;
+}
+
+/* ===== TAB PANE MODERN DESIGN ===== */
+
+.tab-pane {
+    -fx-background-color: transparent;
+}
+
+/* Tabs bar */
+.tab-pane .tab-header-area {
+    -fx-padding: 0 0 10 0;
+}
+
+.tab-pane .headers-region {
+    -fx-background-color: transparent;
+}
+
+/* Normal tab */
+.tab {
+    -fx-background-color: #eae3ea;
+    -fx-background-radius: 12 12 0 0;
+    -fx-padding: 8 18;
+}
+
+.tab .tab-label {
+    -fx-text-fill: #6b0a4a;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Hover tab */
+.tab:hover {
+    -fx-background-color: #d8c4d4;
+}
+
+/* Selected tab */
+.tab:selected {
+    -fx-background-color: #7a0b4d;
+}
+
+.tab:selected .tab-label {
+    -fx-text-fill: white;
+}
+
+/* Remove ugly focus border */
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+.sb-text-field {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1.5;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #333;
+    -fx-prompt-text-fill: #aaa;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 6, 0.2, 0, 3);
+    -fx-transition: all 0.2s ease-in-out;
+}
+
+/* Hover effect */
+.sb-text-field:hover {
+    -fx-border-color: #7a0b4d;
+    -fx-effect: dropshadow(gaussian, rgba(122,11,77,0.2), 8, 0.25, 0, 4);
+}
+
+/* Focus effect */
+.sb-text-field:focused {
+    -fx-border-color: #7a0b4d;
+    -fx-background-color: #fff;
+    -fx-effect: dropshadow(gaussian, rgba(122,11,77,0.25), 10, 0.3, 0, 4);
+}
+
+

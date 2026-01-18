@@ -12,117 +12,99 @@ import java.util.List;
 
 public class OrderDAO {
 
-    public static int createOrder(int customerId, double total) {
+	public static int createOrder(int customerId, double total) {
 
-        String sql = """
+		String sql = """
 				    INSERT INTO Orders
 				    (CustomerID, OrderDate, TotalAmount, PaymentMethod, Status)
 				    VALUES (?, CURDATE(), ?, 'CASH', 'NEW')
 				""";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+		try (Connection con = DBConnection.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setInt(1, customerId);
-            ps.setDouble(2, total);
-            ps.executeUpdate();
+			ps.setInt(1, customerId);
+			ps.setDouble(2, total);
+			ps.executeUpdate();
 
-            ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next())
-                return rs.getInt(1);
+			ResultSet rs = ps.getGeneratedKeys();
+			if (rs.next())
+				return rs.getInt(1);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return -1;
-    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return -1;
+	}
 
-    public static List<Order> getAllOrders(LocalDate from, LocalDate to) {
-        List<Order> list = new ArrayList<>();
+	public static List<Order> getAllOrders(LocalDate from, LocalDate to) {
+		List<Order> list = new ArrayList<>();
 
-        String sql = """
-            SELECT o.OrderID, o.CustomerID, o.OrderDate, o.TotalAmount,
-                   c.FullName
-            FROM Orders o
-            JOIN Customer c ON o.CustomerID = c.CustomerID
-            WHERE (? IS NULL OR o.OrderDate >= ?)
-              AND (? IS NULL OR o.OrderDate <= ?)
-            ORDER BY o.OrderDate DESC
-        """;
+		String sql = """
+				    SELECT o.OrderID, o.CustomerID, o.OrderDate, o.TotalAmount,
+				           c.FullName
+				    FROM Orders o
+				    JOIN Customer c ON o.CustomerID = c.CustomerID
+				    WHERE (? IS NULL OR o.OrderDate >= ?)
+				      AND (? IS NULL OR o.OrderDate <= ?)
+				    ORDER BY o.OrderDate DESC
+				""";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-            // from
-            if (from == null) {
-                ps.setNull(1, Types.DATE);
-                ps.setNull(2, Types.DATE);
-            } else {
-                ps.setDate(1, Date.valueOf(from));
-                ps.setDate(2, Date.valueOf(from));
-            }
+			if (from == null) {
+				ps.setNull(1, Types.DATE);
+				ps.setNull(2, Types.DATE);
+			} else {
+				ps.setDate(1, Date.valueOf(from));
+				ps.setDate(2, Date.valueOf(from));
+			}
 
-            // to
-            if (to == null) {
-                ps.setNull(3, Types.DATE);
-                ps.setNull(4, Types.DATE);
-            } else {
-                ps.setDate(3, Date.valueOf(to));
-                ps.setDate(4, Date.valueOf(to));
-            }
+			if (to == null) {
+				ps.setNull(3, Types.DATE);
+				ps.setNull(4, Types.DATE);
+			} else {
+				ps.setDate(3, Date.valueOf(to));
+				ps.setDate(4, Date.valueOf(to));
+			}
 
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                list.add(new Order(
-                        rs.getInt("OrderID"),
-                        rs.getInt("CustomerID"),
-                        rs.getString("FullName"),
-                        rs.getDate("OrderDate").toLocalDate(),
-                        rs.getDouble("TotalAmount")
-                ));
-            }
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				list.add(new Order(rs.getInt("OrderID"), rs.getInt("CustomerID"), rs.getString("FullName"),
+						rs.getDate("OrderDate").toLocalDate(), rs.getDouble("TotalAmount")));
+			}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-        return list;
-    }
-    
-    public static List<Order> getOrdersByCustomer(String fullName) {
-        List<Order> list = new ArrayList<>();
-        String sql = "SELECT o.OrderID, o.CustomerID, c.FullName AS CustomerName, o.OrderDate, o.TotalAmount " +
-                     "FROM Orders o " +
-                     "JOIN Customer c ON o.CustomerID = c.CustomerID " +
-                     "WHERE c.FullName = ?";
+		return list;
+	}
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+	public static List<Order> getOrdersByCustomer(String fullName) {
+		List<Order> list = new ArrayList<>();
+		String sql = "SELECT o.OrderID, o.CustomerID, c.FullName AS CustomerName, o.OrderDate, o.TotalAmount "
+				+ "FROM Orders o " + "JOIN Customer c ON o.CustomerID = c.CustomerID " + "WHERE c.FullName = ?";
 
-            ps.setString(1, fullName);
-            ResultSet rs = ps.executeQuery();
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                // تحويل التاريخ من SQL إلى LocalDate
-                Date sqlDate = rs.getDate("OrderDate");
-                LocalDate orderDate = sqlDate != null ? sqlDate.toLocalDate() : null;
+			ps.setString(1, fullName);
+			ResultSet rs = ps.executeQuery();
 
-                // إنشاء كائن Order متوافق مع الكلاس
-                Order order = new Order(
-                        rs.getInt("OrderID"),
-                        rs.getInt("CustomerID"),
-                        rs.getString("CustomerName"),
-                        orderDate,
-                        rs.getDouble("TotalAmount")
-                );
+			while (rs.next()) {
+				Date sqlDate = rs.getDate("OrderDate");
+				LocalDate orderDate = sqlDate != null ? sqlDate.toLocalDate() : null;
 
-                list.add(order);
-            }
+				Order order = new Order(rs.getInt("OrderID"), rs.getInt("CustomerID"), rs.getString("CustomerName"),
+						orderDate, rs.getDouble("TotalAmount"));
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+				list.add(order);
+			}
 
-        return list;
-    }
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return list;
+	}
 }

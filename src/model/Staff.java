@@ -6,7 +6,7 @@ public class Staff {
 	private String fullName;
 	private String position;
 	private double salary;
-	private List<Customer> customers; 
+	private List<Customer> customers;
 
 	public Staff(String fullName, String position, double salary) {
 		this.fullName = fullName;
@@ -14,7 +14,6 @@ public class Staff {
 		this.salary = salary;
 	}
 
-	// Getters
 	public String getFullName() {
 		return fullName;
 	}

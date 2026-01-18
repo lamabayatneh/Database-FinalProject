@@ -53,34 +53,32 @@ public class BookDAO {
 
 		return list;
 	}
-	
-	// في BookDAO
+
 	public static List<Book> getUnsoldBooks() {
-	    List<Book> list = new ArrayList<>();
-	    String sql = """
-	        SELECT b.BookID, b.Title, b.Author, b.Price, b.Quantity, b.AddedDate, b.ImagePath,
-	               c.CategoryID, c.CategoryName, c.Description
-	        FROM Book b
-	        LEFT JOIN OrderItem oi ON b.BookID = oi.BookID
-	        LEFT JOIN Category c ON b.CategoryID = c.CategoryID
-	        WHERE oi.BookID IS NULL
-	    """;
+		List<Book> list = new ArrayList<>();
+		String sql = """
+				    SELECT b.BookID, b.Title, b.Author, b.Price, b.Quantity, b.AddedDate, b.ImagePath,
+				           c.CategoryID, c.CategoryName, c.Description
+				    FROM Book b
+				    LEFT JOIN OrderItem oi ON b.BookID = oi.BookID
+				    LEFT JOIN Category c ON b.CategoryID = c.CategoryID
+				    WHERE oi.BookID IS NULL
+				""";
 
-	    try (Connection con = DBConnection.getConnection();
-	         PreparedStatement ps = con.prepareStatement(sql);
-	         ResultSet rs = ps.executeQuery()) {
+		try (Connection con = DBConnection.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
 
-	        while (rs.next()) {
-	            list.add(mapRow(rs));  // نفس mapRow اللي تستخدمها لكل الكتب
-	        }
+			while (rs.next()) {
+				list.add(mapRow(rs));
+			}
 
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	    }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-	    return list;
+		return list;
 	}
-
 
 	public static List<Book> getBooksSortedByCategory() {
 		List<Book> list = new ArrayList<>();
@@ -93,15 +91,12 @@ public class BookDAO {
 				ResultSet rs = ps.executeQuery()) {
 
 			while (rs.next()) {
-				// إنشاء كائن الفئة
 				Category cat = new Category(rs.getInt("CategoryID"), rs.getString("CategoryName"),
 						rs.getString("Description"));
 
-				// تحويل التاريخ من SQL إلى LocalDate
 				Date sqlDate = rs.getDate("AddedDate");
 				LocalDate addedDate = sqlDate != null ? ((java.sql.Date) sqlDate).toLocalDate() : null;
 
-				// إنشاء كائن الكتاب
 				Book book = new Book(rs.getInt("BookID"), rs.getString("Title"), rs.getString("Author"),
 						rs.getDouble("Price"), rs.getInt("Quantity"), addedDate, cat, rs.getString("ImagePath"));
 
@@ -141,7 +136,6 @@ public class BookDAO {
 		return list;
 	}
 
-	/* ================= LATEST BOOKS ================= */
 	public static List<Book> getLatestBooks(int limit) {
 
 		List<Book> books = new ArrayList<>();
@@ -168,7 +162,6 @@ public class BookDAO {
 		return books;
 	}
 
-	/* ================= SEARCH ================= */
 	public static List<Book> searchBooks(String keyword) {
 
 		List<Book> list = new ArrayList<>();
@@ -197,7 +190,6 @@ public class BookDAO {
 		return list;
 	}
 
-	/* ================= CATEGORY ================= */
 	public static List<Book> getBooksByCategory(String categoryName) {
 		List<Book> list = new ArrayList<>();
 
@@ -304,48 +296,35 @@ public class BookDAO {
 
 	private static Book mapRow(ResultSet rs) throws Exception {
 
-	    int id = rs.getInt("BookID");
-	    String title = rs.getString("Title");
-	    String author = rs.getString("Author");
-	    double price = rs.getDouble("Price");
-	    int quantity = rs.getInt("Quantity");
-	    
+		int id = rs.getInt("BookID");
+		String title = rs.getString("Title");
+		String author = rs.getString("Author");
+		double price = rs.getDouble("Price");
+		int quantity = rs.getInt("Quantity");
 
-	    LocalDate date = null;
-	    if (rs.getDate("AddedDate") != null) {
-	        date = rs.getDate("AddedDate").toLocalDate();
-	    }
+		LocalDate date = null;
+		if (rs.getDate("AddedDate") != null) {
+			date = rs.getDate("AddedDate").toLocalDate();
+		}
 
-	    String imagePath = null;
-	    try {
-	        imagePath = rs.getString("ImagePath");
-	    } catch (Exception ignored) {}
+		String imagePath = null;
+		try {
+			imagePath = rs.getString("ImagePath");
+		} catch (Exception ignored) {
+		}
 
-	    // ✅ Category from JOIN
-	    Category category = null;
-	    try {
-	        int catId = rs.getInt("CategoryID");
-	        String catName = rs.getString("CategoryName");
-	        String catDesc = rs.getString("Description");
-	        category = new Category(catId, catName, catDesc);
-	    } catch (Exception ignored) {}
+		Category category = null;
+		try {
+			int catId = rs.getInt("CategoryID");
+			String catName = rs.getString("CategoryName");
+			String catDesc = rs.getString("Description");
+			category = new Category(catId, catName, catDesc);
+		} catch (Exception ignored) {
+		}
 
-	    // ✅ استخدمي هذا الكونستركتور بالضبط
-	    return new Book(
-	            id,
-	            title,
-	            author,
-	            price,
-	            quantity,
-	            date,
-	            category,
-	            imagePath
-	    );
-	    
+		return new Book(id, title, author, price, quantity, date, category, imagePath);
 
 	}
-
-
 
 	public static void insertBook(Book book) {
 
@@ -436,7 +415,7 @@ public class BookDAO {
 			ps.setInt(1, threshold);
 			ResultSet rs = ps.executeQuery();
 			while (rs.next())
-				list.add(mapRow(rs)); // نفس mapRow اللي عندك
+				list.add(mapRow(rs));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -450,6 +429,88 @@ public class BookDAO {
 			ps.setInt(2, bookId);
 			ps.executeUpdate();
 		}
+	}
+
+	public static List<String> getAllAuthors() {
+		List<String> list = new ArrayList<>();
+
+		String sql = """
+				    SELECT DISTINCT Author
+				    FROM Book
+				    WHERE Author IS NOT NULL AND TRIM(Author) <> ''
+				    ORDER BY Author
+				""";
+
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				list.add(rs.getString("Author"));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return list;
+	}
+
+	public static List<Book> getBooksByAuthor(String author) {
+		List<Book> list = new ArrayList<>();
+
+		String sql = """
+				    SELECT b.*, c.CategoryName, c.Description
+				    FROM Book b
+				    LEFT JOIN Category c ON b.CategoryID = c.CategoryID
+				    WHERE b.Author = ?
+				    ORDER BY b.Title
+				""";
+
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setString(1, author);
+			ResultSet rs = ps.executeQuery();
+
+			while (rs.next()) {
+				list.add(mapRow(rs));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return list;
+	}
+
+	public static List<Book> getBestSellerBooks(int minSold, int limit) {
+		List<Book> list = new ArrayList<>();
+
+		String sql = """
+				    SELECT b.*, c.CategoryName, c.Description, SUM(oi.Quantity) AS SoldQty
+				    FROM OrderItem oi
+				    JOIN Book b ON b.BookID = oi.BookID
+				    LEFT JOIN Category c ON b.CategoryID = c.CategoryID
+				    GROUP BY b.BookID
+				    HAVING SUM(oi.Quantity) >= ?
+				    ORDER BY SoldQty DESC
+				    LIMIT ?
+				""";
+
+		try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setInt(1, minSold);
+			ps.setInt(2, limit);
+
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				list.add(mapRow(rs));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return list;
 	}
 
 }
